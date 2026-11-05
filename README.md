@@ -96,7 +96,9 @@ if (window.arkade) {
 }
 ```
 
-Without the extension, the PWA can be opened as a popup and will hand back a connect/send result via `postMessage` (same-browser only — see `apps/pwa/src/ConnectApp.vue` for the request handling). Ark addresses only for sends in this version; plain on-chain Bitcoin addresses aren't supported yet.
+Without the extension, the PWA can be opened as a popup and will hand back a connect/send result via `postMessage`. Ark addresses only for sends in this version; plain on-chain Bitcoin addresses aren't supported yet.
+
+Full API, events, errors and the popup protocol: [docs/dapp-integration.md](docs/dapp-integration.md).
 
 ## Contributing / support
 
