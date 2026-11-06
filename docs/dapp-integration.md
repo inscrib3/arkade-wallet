@@ -1,12 +1,12 @@
-# dApp integration
+---
+description: Methods, events, return values, and errors for the Inscrib3 provider.
+---
 
-A web page can talk to this wallet in two ways:
+# Provider API reference
 
-| | Browser extension | PWA popup |
-|---|---|---|
-| How | `window.arkade`, injected into every page | Open the PWA in a popup with URL parameters; it answers with `postMessage` |
-| What you can do | Everything below | Connect, and send BTC to an Ark address |
-| Use when | The user has the extension installed | Fallback when `window.arkade` is missing |
+This page is the complete reference for the extension provider and PWA popup protocol.
+
+Read [browser-extension.md](browser-extension.md "mention") for the recommended application flow. Read [pwa-popup.md](pwa-popup.md "mention") for the fallback flow.
 
 All amounts are **satoshis, as positive integers**. Sends go to **Ark addresses** only (`ark1…` on mainnet, `tark1…` on Mutinynet); onchain and Lightning destinations are not accepted from dApps.
 
@@ -42,26 +42,26 @@ The connection is to the wallet, not to one account: after the user switches acc
 
 ### Methods
 
-| Method | Returns | Approval window |
-|---|---|---|
-| `connect()` | `string[]`: the active Ark address | First time per origin |
-| `disconnect()` | `true` | No |
-| `isConnected()` | `boolean` | No |
-| `getAccounts()` | `string[]`, empty if not connected or locked | No |
-| `getProviderState()` | `{ isConnected, isUnlocked, network, accounts }` | No |
-| `getAddress()` | Ark address | No |
-| `getBoardingAddress()` | Onchain address that moves BTC into Ark | No |
-| `getXOnlyPublicKey()` | Hex x-only public key of the Ark signing key | No |
-| `getBalance()` | `BalanceInfo` (below) | No |
-| `getNetwork()` | `NetworkInfo` (below) | No |
-| `getAssets()` | `AssetInfo[]` (below) | No |
-| `getTransactionHistory()` | `TxHistoryEntry[]` (below) | No |
-| `sendToAddress(address, amount)` | txid | Every call |
-| `sendAsset(address, assets, bitcoinAmount?)` | txid | Every call |
-| `settle()` | txid of the batch the VTXOs were renewed in | Every call |
-| `signMessage(message)` | `{ message, signature, address }` (BIP-322) | Every call |
+| Method                                       | Returns                                          | Approval window       |
+| -------------------------------------------- | ------------------------------------------------ | --------------------- |
+| `connect()`                                  | `string[]`: the active Ark address               | First time per origin |
+| `disconnect()`                               | `true`                                           | No                    |
+| `isConnected()`                              | `boolean`                                        | No                    |
+| `getAccounts()`                              | `string[]`, empty if not connected or locked     | No                    |
+| `getProviderState()`                         | `{ isConnected, isUnlocked, network, accounts }` | No                    |
+| `getAddress()`                               | Ark address                                      | No                    |
+| `getBoardingAddress()`                       | Onchain address that moves BTC into Ark          | No                    |
+| `getXOnlyPublicKey()`                        | Hex x-only public key of the Ark signing key     | No                    |
+| `getBalance()`                               | `BalanceInfo` (below)                            | No                    |
+| `getNetwork()`                               | `NetworkInfo` (below)                            | No                    |
+| `getAssets()`                                | `AssetInfo[]` (below)                            | No                    |
+| `getTransactionHistory()`                    | `TxHistoryEntry[]` (below)                       | No                    |
+| `sendToAddress(address, amount)`             | txid                                             | Every call            |
+| `sendAsset(address, assets, bitcoinAmount?)` | txid                                             | Every call            |
+| `settle()`                                   | txid of the batch the VTXOs were renewed in      | Every call            |
+| `signMessage(message)`                       | `{ message, signature, address }` (BIP-322)      | Every call            |
 
-Calls that read wallet data need the wallet unlocked and reject with `Wallet is locked` otherwise. Calls that open an approval window need it unlocked *before* the call: the window has no unlock step, so they reject straight away with `Wallet is locked. Open the extension, unlock it, then try again.`
+Calls that read wallet data need the wallet unlocked and reject with `Wallet is locked` otherwise. Calls that open an approval window need it unlocked _before_ the call: the window has no unlock step, so they reject straight away with `Wallet is locked. Open the extension, unlock it, then try again.`
 
 #### `sendAsset`
 
@@ -127,24 +127,24 @@ window.arkade.on('accountsChanged', (accounts) => { /* string[], empty after a d
 window.arkade.off('accountsChanged', handler);
 ```
 
-| Event | Payload | When |
-|---|---|---|
-| `accountsChanged` | `string[]` | Your origin connected, disconnected, or the active address changed (account or network switch). Only sent to your origin. |
-| `accountChanged` | none | The active account changed; refetch what you show. |
-| `networkChanged` | `'bitcoin' \| 'mutinynet' \| 'custom'` | The user switched network. |
-| `lock` / `unlock` | none | The wallet locked (manually or by auto-lock) or unlocked. |
+| Event             | Payload                                | When                                                                                                                      |
+| ----------------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `accountsChanged` | `string[]`                             | Your origin connected, disconnected, or the active address changed (account or network switch). Only sent to your origin. |
+| `accountChanged`  | none                                   | The active account changed; refetch what you show.                                                                        |
+| `networkChanged`  | `'bitcoin' \| 'mutinynet' \| 'custom'` | The user switched network.                                                                                                |
+| `lock` / `unlock` | none                                   | The wallet locked (manually or by auto-lock) or unlocked.                                                                 |
 
 ### Errors
 
 Every method returns a promise that rejects with an `Error`. Messages you can match on:
 
-| Message | Cause |
-|---|---|
-| `Not connected. Call connect() first.` | Your origin isn't approved yet |
+| Message                                                                                                                                           | Cause                                                                                            |
+| ------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `Not connected. Call connect() first.`                                                                                                            | Your origin isn't approved yet                                                                   |
 | `User rejected the connection request` / `User rejected the transaction` / `User rejected the signature request` / `User rejected the settlement` | The user clicked Reject or closed the window, or your origin already has 3 approval windows open |
-| `Wallet is locked. Open the extension, unlock it, then try again.` | Approval call while locked |
-| `The active account or network changed while this request was open, so nothing was done. Ask the site to try again.` | The user switched account or network while the approval window was open |
-| `Invalid amount: must be a positive integer` | Amount is zero, negative or has decimals |
+| `Wallet is locked. Open the extension, unlock it, then try again.`                                                                                | Approval call while locked                                                                       |
+| `The active account or network changed while this request was open, so nothing was done. Ask the site to try again.`                              | The user switched account or network while the approval window was open                          |
+| `Invalid amount: must be a positive integer`                                                                                                      | Amount is zero, negative or has decimals                                                         |
 
 Server-side errors (insufficient funds, amount below the server's minimum, and so on) are passed through as their message text.
 
@@ -189,13 +189,13 @@ Always check `event.origin` against the PWA's origin: any page can `postMessage`
 
 The popup asks the user to unlock (or create a wallet) if needed, shows the request, and posts one of these back to your origin before closing itself:
 
-| `event.data.type` | Extra fields | Meaning |
-|---|---|---|
-| `inscrib3:connect` | `accounts: string[]` | Approved |
-| `inscrib3:connect_rejected` | | User rejected |
-| `inscrib3:send` | `txid` | Sent |
-| `inscrib3:send_failed` | `error` | Approved, but the send failed |
-| `inscrib3:send_rejected` | | User rejected |
+| `event.data.type`           | Extra fields         | Meaning                       |
+| --------------------------- | -------------------- | ----------------------------- |
+| `inscrib3:connect`          | `accounts: string[]` | Approved                      |
+| `inscrib3:connect_rejected` |                      | User rejected                 |
+| `inscrib3:send`             | `txid`               | Sent                          |
+| `inscrib3:send_failed`      | `error`              | Approved, but the send failed |
+| `inscrib3:send_rejected`    |                      | User rejected                 |
 
 If the user closes the window instead, no message arrives: the `popup.closed` check above covers that.
 
