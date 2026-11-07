@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'bun:test';
 import type { KeyValueStore } from '@inscrib3/core';
 
 type UpdateListener = (details: { version: string }) => void;
@@ -14,16 +14,26 @@ let store: KeyValueStore;
     onUpdateAvailable: { addListener: (listener: UpdateListener) => (updateListener = listener) },
   },
 };
-globalThis.fetch = (async () => {
-  githubRequests++;
-  return new Response(JSON.stringify({ tag_name: '1.1.0', html_url: 'https://github.com/o/r/releases/tag/1.1.0' }));
-}) as unknown as typeof fetch;
-
-process.env.WXT_RELEASES_REPO = 'o/r';
 const { checkForNewVersion, getVersionInfo, rememberDownloadedUpdates } = await import('./version-check.js');
 
 const STORE_MANIFEST = { version: '1.0.0', update_url: 'https://clients2.google.com/service/update2/crx' };
 const SIDELOADED_MANIFEST = { version: '1.0.0' };
+
+// bun test shares globals and env between test files.
+const realFetch = globalThis.fetch;
+
+beforeAll(() => {
+  process.env.WXT_RELEASES_REPO = 'o/r';
+  globalThis.fetch = (async () => {
+    githubRequests++;
+    return new Response(JSON.stringify({ tag_name: '1.1.0', html_url: 'https://github.com/o/r/releases/tag/1.1.0' }));
+  }) as unknown as typeof fetch;
+});
+
+afterAll(() => {
+  delete process.env.WXT_RELEASES_REPO;
+  globalThis.fetch = realFetch;
+});
 
 beforeEach(() => {
   githubRequests = 0;

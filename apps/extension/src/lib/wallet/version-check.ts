@@ -9,7 +9,9 @@ const CACHE_KEY = 'arkade:version-check';
 const DISMISSED_KEY = 'arkade:version-check:dismissed';
 // owner/name of the repo whose release workflow built this, so a fork or a
 // moved repo checks its own releases. Local builds have none and skip it.
-const RELEASES_REPO: string | undefined = import.meta.env.WXT_RELEASES_REPO;
+function releasesRepo(): string | undefined {
+  return import.meta.env.WXT_RELEASES_REPO;
+}
 
 interface VersionCheckCache {
   latestVersion: string | null;
@@ -66,10 +68,11 @@ export async function checkForNewVersionIfDue(store: KeyValueStore): Promise<voi
 }
 
 export async function checkForNewVersion(store: KeyValueStore): Promise<void> {
-  if (!RELEASES_REPO || isStoreInstall()) return;
+  const repo = releasesRepo();
+  if (!repo || isStoreInstall()) return;
   const now = Math.floor(Date.now() / 1000);
   try {
-    const response = await fetch(`https://api.github.com/repos/${RELEASES_REPO}/releases/latest`, { headers: { Accept: 'application/vnd.github+json' } });
+    const response = await fetch(`https://api.github.com/repos/${repo}/releases/latest`, { headers: { Accept: 'application/vnd.github+json' } });
     if (!response.ok) throw new Error(`GitHub releases check failed: ${response.status}`);
     const data = (await response.json()) as { tag_name?: string; html_url?: string };
     const cache: VersionCheckCache = {
