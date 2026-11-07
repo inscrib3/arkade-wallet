@@ -6,6 +6,10 @@ export function getVersionInfo(): Promise<VersionInfo> {
   return sendToBackground('wallet_getVersionInfo');
 }
 
+export function installDownloadedUpdate(): void {
+  browser.runtime.reload();
+}
+
 export function dismissVersionUpdate(version: string): Promise<void> {
   return sendToBackground('wallet_dismissVersionUpdate', { version });
 }

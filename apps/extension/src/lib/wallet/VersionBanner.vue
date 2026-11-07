@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
-import { getVersionInfo, dismissVersionUpdate } from './version-client.js';
+import { getVersionInfo, dismissVersionUpdate, installDownloadedUpdate } from './version-client.js';
 
 const updateAvailable = ref(false);
 const latestVersion = ref<string | null>(null);
 const releaseUrl = ref<string | null>(null);
+const canInstallByReloading = ref(false);
 
 onMounted(async () => {
   try {
@@ -12,6 +13,7 @@ onMounted(async () => {
     updateAvailable.value = info.updateAvailable;
     latestVersion.value = info.latestVersion;
     releaseUrl.value = info.releaseUrl;
+    canInstallByReloading.value = info.canInstallByReloading;
   } catch {
     // no cached check yet, or the background call failed - just stay hidden
   }
@@ -25,7 +27,11 @@ function dismiss() {
 
 <template>
   <div v-if="updateAvailable" class="version-banner">
-    <span class="text">
+    <span v-if="canInstallByReloading" class="text">
+      New version {{ latestVersion }} ready. Updating locks the wallet.
+      <button type="button" class="update-btn" @click="installDownloadedUpdate">Update</button>
+    </span>
+    <span v-else class="text">
       New version{{ latestVersion ? ` ${latestVersion}` : '' }} available
       <a v-if="releaseUrl" :href="releaseUrl" target="_blank" rel="noopener noreferrer">Download</a>
     </span>
@@ -52,6 +58,16 @@ function dismiss() {
   text-decoration: none;
 }
 .text a:hover { text-decoration: underline; }
+.update-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--color-accent);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.update-btn:hover { text-decoration: underline; }
 .dismiss-btn {
   background: none;
   border: none;

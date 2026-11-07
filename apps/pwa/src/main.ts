@@ -4,6 +4,7 @@ import { createPwaWalletClient } from './pwa-wallet-client.js';
 import { setupAutoLock } from './auto-lock.js';
 import ConnectApp from './ConnectApp.vue';
 import UpdateBanner from './UpdateBanner.vue';
+import ExtensionBanner from './ExtensionBanner.vue';
 import type { PopupRequest } from './popup-request.js';
 
 // The opener controls the URL params, so they only pick the request type.
@@ -53,10 +54,11 @@ const client = createPwaWalletClient();
 app.provide(WALLET_CLIENT_KEY, client);
 app.mount('#app');
 
-// Popup mode closes itself after approval: no auto-lock or update banner.
+// Popup mode closes itself after approval: no auto-lock or banners.
 if (!isPopupMode) {
   setupAutoLock(client);
   createApp(UpdateBanner).mount('#update-banner');
+  createApp(ExtensionBanner).mount('#extension-banner');
 }
 
 export default app;

@@ -29,7 +29,9 @@ Both apps mount the same `@inscrib3/ui` screens and talk to `@inscrib3/core`'s `
 
 ## Installing the extension
 
-Grab the latest zip from this repo's [Releases](../../releases) page, then:
+Install it from the [Chrome Web Store](https://chromewebstore.google.com/detail/hafphignbjdmblopkophkohgnphalclg).
+
+Or load it manually: grab the latest zip from this repo's [Releases](../../releases) page, then:
 
 1. Go to `chrome://extensions` (or `brave://extensions`)
 2. Enable Developer mode

@@ -34,6 +34,7 @@
           justify-content: center;
           padding: 40px 16px;
         }
+        body.has-top-banner { padding-top: 64px; }
         #app {
           width: 100%;
           /* min-height beats height, so reset it for the card */
@@ -62,8 +63,9 @@
   </head>
   <body>
     <div id="app"></div>
-    <!-- outside #app so the card sizing rules don't apply to it -->
+    <!-- outside #app so the card sizing rules don't apply to them -->
     <div id="update-banner"></div>
+    <div id="extension-banner"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

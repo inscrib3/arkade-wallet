@@ -1,7 +1,7 @@
 import type { KeyValueStore } from '@inscrib3/core';
 
-// Chrome only auto-updates extensions with an update_url; sideloaded installs
-// rely on this GitHub release check instead.
+// Chrome only auto-updates extensions with an update_url, which the Web Store
+// adds to the manifest. Sideloaded installs rely on this GitHub release check.
 export const VERSION_CHECK_ALARM_NAME = 'arkade-version-check';
 const VERSION_CHECK_INTERVAL_MINUTES = 12 * 60;
 
@@ -22,6 +22,7 @@ export interface VersionInfo {
   updateAvailable: boolean;
   latestVersion: string | null;
   releaseUrl: string | null;
+  canInstallByReloading: boolean;
 }
 
 // Tags are plain X.Y.Z, so a numeric compare is enough (1.10.0 > 1.9.0).
@@ -38,6 +39,19 @@ function isNewer(latest: string, current: string): boolean {
   return false;
 }
 
+function isStoreInstall(): boolean {
+  return 'update_url' in browser.runtime.getManifest();
+}
+
+// Fires once Chrome has downloaded an update it can't install yet because the
+// service worker is running. Reloading the extension installs it right away.
+export function rememberDownloadedUpdates(store: KeyValueStore): void {
+  browser.runtime.onUpdateAvailable.addListener(({ version }) => {
+    const cache: VersionCheckCache = { latestVersion: version, releaseUrl: null, checkedAt: Math.floor(Date.now() / 1000) };
+    void store.set(CACHE_KEY, cache);
+  });
+}
+
 export function scheduleVersionCheck(): void {
   browser.alarms.create(VERSION_CHECK_ALARM_NAME, { periodInMinutes: VERSION_CHECK_INTERVAL_MINUTES });
 }
@@ -52,7 +66,7 @@ export async function checkForNewVersionIfDue(store: KeyValueStore): Promise<voi
 }
 
 export async function checkForNewVersion(store: KeyValueStore): Promise<void> {
-  if (!RELEASES_REPO) return;
+  if (!RELEASES_REPO || isStoreInstall()) return;
   const now = Math.floor(Date.now() / 1000);
   try {
     const response = await fetch(`https://api.github.com/repos/${RELEASES_REPO}/releases/latest`, { headers: { Accept: 'application/vnd.github+json' } });
@@ -71,13 +85,14 @@ export async function checkForNewVersion(store: KeyValueStore): Promise<void> {
 
 export async function getVersionInfo(store: KeyValueStore): Promise<VersionInfo> {
   const currentVersion = browser.runtime.getManifest().version;
+  const canInstallByReloading = isStoreInstall();
   const cached = await store.get<VersionCheckCache>(CACHE_KEY);
   if (!cached?.latestVersion || !isNewer(cached.latestVersion, currentVersion)) {
-    return { currentVersion, updateAvailable: false, latestVersion: cached?.latestVersion ?? null, releaseUrl: cached?.releaseUrl ?? null };
+    return { currentVersion, updateAvailable: false, latestVersion: cached?.latestVersion ?? null, releaseUrl: cached?.releaseUrl ?? null, canInstallByReloading };
   }
   const dismissed = await store.get<string>(DISMISSED_KEY);
   const updateAvailable = dismissed !== cached.latestVersion;
-  return { currentVersion, updateAvailable, latestVersion: cached.latestVersion, releaseUrl: cached.releaseUrl };
+  return { currentVersion, updateAvailable, latestVersion: cached.latestVersion, releaseUrl: cached.releaseUrl, canInstallByReloading };
 }
 
 export async function dismissVersionUpdate(store: KeyValueStore, version: string): Promise<void> {
