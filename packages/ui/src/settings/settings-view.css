@@ -30,6 +30,7 @@
 .settings-view button:disabled { opacity: 0.5; cursor: not-allowed; }
 .settings-view button.secondary { background: var(--color-surface-alt); color: var(--color-text); }
 .settings-view button.danger { background: var(--color-error); color: #fff; }
+.settings-view button.danger-outline { background: none; border: 1px solid var(--color-error); color: var(--color-error); }
 .settings-view .copy-btn { display: flex; align-items: center; justify-content: center; gap: 6px; background: var(--color-surface-alt); border: 1px solid var(--color-border); color: var(--color-text); font-size: 13px; }
 .settings-view .error { color: var(--color-error); font-size: 13px; }
 .settings-view .success-hint { color: var(--color-success); font-size: 12px; }

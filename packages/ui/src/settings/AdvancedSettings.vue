@@ -2,6 +2,8 @@
 import { ref } from 'vue';
 import { useWalletClient } from '../wallet-client-key.js';
 
+const emit = defineEmits<{ reset: [] }>();
+
 const client = useWalletClient();
 
 // Only clears the local VTXO/tx cache, never the seed. Two-step confirm.
@@ -9,11 +11,9 @@ const resetConfirming = ref(false);
 const resetPassword = ref('');
 const resetLoading = ref(false);
 const resetError = ref('');
-const resetSuccess = ref(false);
 
 function startReset() {
   resetError.value = '';
-  resetSuccess.value = false;
   resetConfirming.value = true;
 }
 
@@ -29,8 +29,7 @@ async function confirmReset() {
   resetLoading.value = true;
   try {
     await client.resetLocalCache(resetPassword.value);
-    resetSuccess.value = true;
-    resetConfirming.value = false;
+    emit('reset');
   } catch (e: unknown) {
     const msg = String(e);
     resetError.value = msg.includes('INCORRECT_PASSWORD')
@@ -47,16 +46,15 @@ async function confirmReset() {
 
 <template>
   <section class="settings-view">
-    <p class="hint warning">
-      Wipes this wallet's local VTXO/transaction cache and re-syncs from the Ark server. Your seed phrase is never touched - this can't lose funds, but any not-yet-synced local state is discarded.
-    </p>
-
     <template v-if="!resetConfirming">
-      <p v-if="resetSuccess" class="success-hint">Local cache reset. Balance and history have been re-synced.</p>
-      <button type="button" class="secondary" @click="startReset">Reset local cache…</button>
+      <button type="button" class="danger-outline" @click="startReset">Reset local cache</button>
+      <p class="hint">Re-sync balance and history. Your seed is not affected.</p>
     </template>
 
     <template v-else>
+      <p class="hint warning">
+        Wipes this wallet's local VTXO/transaction cache and re-syncs from the Ark server. Your seed phrase is never touched - this can't lose funds, but any not-yet-synced local state is discarded.
+      </p>
       <label>
         Password
         <input

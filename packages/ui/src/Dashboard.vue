@@ -12,6 +12,8 @@ import type { IncomingFundsSummary } from '@inscrib3/core';
 
 const emit = defineEmits<{ locked: [] }>();
 
+const TOAST_DURATION_MS = 6000;
+
 type Section = 'home' | 'activity' | 'settings';
 // Home's sub-screens, each opened from the home page and closed with Back.
 // A send's asset is SendView's key: 'btc' or 'ark:<assetId>'.
@@ -39,7 +41,8 @@ const client = useWalletClient();
 // send forms: incoming funds must not wipe a half-filled send.
 const dataKey = ref(0);
 const received = ref<IncomingFundsSummary | null>(null);
-let receivedTimer: ReturnType<typeof setTimeout> | undefined;
+const cacheResetDone = ref(false);
+let toastTimer: ReturnType<typeof setTimeout> | undefined;
 let unsubscribe: (() => void) | undefined;
 
 onMounted(() => {
@@ -47,16 +50,28 @@ onMounted(() => {
     if (event !== 'fundsReceived') return;
     dataKey.value++;
     received.value = data as IncomingFundsSummary;
-    clearTimeout(receivedTimer);
-    receivedTimer = setTimeout(() => {
-      received.value = null;
-    }, 6000);
+    hideToastsLater();
   });
 });
 
+function hideToastsLater() {
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    received.value = null;
+    cacheResetDone.value = false;
+  }, TOAST_DURATION_MS);
+}
+
+function onCacheReset() {
+  dataKey.value++;
+  goHome();
+  cacheResetDone.value = true;
+  hideToastsLater();
+}
+
 onUnmounted(() => {
   unsubscribe?.();
-  clearTimeout(receivedTimer);
+  clearTimeout(toastTimer);
 });
 
 async function lock() {
@@ -68,11 +83,12 @@ async function lock() {
 <template>
   <div class="dashboard">
     <header>
-      <span class="logo"><img src="/image/inscrib3_logo.png" alt="Inscrib3" /></span>
+      <a class="logo" href="https://inscrib3.com/" target="_blank" rel="noopener noreferrer"><img src="/image/inscrib3_logo.png" alt="Inscrib3" /></a>
       <button class="icon-btn" @click="lock" title="Lock wallet"><Icon name="lock" :size="18" /></button>
     </header>
 
-    <p v-if="received" class="funds-toast">
+    <p v-if="cacheResetDone" class="toast">Local cache reset. Balance and history have been re-synced.</p>
+    <p v-if="received" class="toast">
       Received {{ received.amountSats.toLocaleString() }} sats
       <span class="funds-layer">{{ received.type === 'vtxo' ? 'offchain' : 'onchain' }}</span>
     </p>
@@ -119,7 +135,7 @@ async function lock() {
           <Activity :key="dataKey" />
         </div>
 
-        <SettingsPanel v-else-if="section === 'settings'" />
+        <SettingsPanel v-else-if="section === 'settings'" @cache-reset="onCacheReset" />
       </div>
     </div>
 
@@ -141,7 +157,7 @@ async function lock() {
 </template>
 
 <style scoped>
-.funds-toast {
+.toast {
   display: flex;
   align-items: center;
   gap: 8px;

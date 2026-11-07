@@ -10,6 +10,8 @@ import SeedSettings from './settings/SeedSettings.vue';
 import SitesSettings from './settings/SitesSettings.vue';
 import AdvancedSettings from './settings/AdvancedSettings.vue';
 
+const emit = defineEmits<{ cacheReset: [] }>();
+
 const client = useWalletClient();
 
 type SettingsView =
@@ -86,7 +88,7 @@ const currentTitle = computed(() => MENU.find((m) => m.id === view.value)?.title
       <AccountsSettings v-else-if="view === 'accounts'" />
       <SeedSettings v-else-if="view === 'seed'" />
       <SitesSettings v-else-if="view === 'sites'" />
-      <AdvancedSettings v-else-if="view === 'advanced'" />
+      <AdvancedSettings v-else-if="view === 'advanced'" @reset="emit('cacheReset')" />
       <RecoveryPanel v-else-if="view === 'recovery'" />
     </template>
   </div>
