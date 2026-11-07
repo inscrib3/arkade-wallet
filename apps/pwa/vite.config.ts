@@ -40,9 +40,9 @@ export default defineConfig({
       // The main bundle is the app itself; it must stay in the offline cache.
       workbox: { maximumFileSizeToCacheInBytes: 4 * 1024 * 1024 },
       manifest: {
-        name: 'Inscrib3',
+        name: 'Inscrib3 Wallet',
         short_name: 'Inscrib3',
-        description: 'Bitcoin wallet for the Ark protocol',
+        description: 'Your gateway to programmable Bitcoin.',
         theme_color: '#000000',
         background_color: '#000000',
         display: 'standalone',

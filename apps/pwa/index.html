@@ -3,24 +3,24 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>Inscrib3</title>
-    <link rel="icon" type="image/png" href="/icons/favicon.png" />
+    <title>Inscrib3 Wallet</title>
+    <link rel="icon" type="image/svg+xml" href="/image/logo.svg" />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
     <style>
       /* same palette as the extension's index.html files - keep in sync */
       :root {
         --color-bg: #000000;
-        --color-surface: #111111;
-        --color-surface-alt: #1a1a1a;
-        --color-border: #453a5f;
-        --color-border-accent: #7458c4;
-        --color-text: #f0f0f0;
-        --color-text-muted: #888888;
-        --color-accent: #7cfb9e;
-        --color-accent-text: #000000;
-        --color-accent-secondary: #8b5cf6;
-        --color-error: #ff6b6b;
-        --color-success: #4caf50;
+        --color-surface: #0d0f0f;
+        --color-surface-alt: #131616;
+        --color-border: rgba(255, 255, 255, 0.13);
+        --color-border-accent: rgba(52, 211, 153, 0.42);
+        --color-text: #f3f5f4;
+        --color-text-muted: #9ba3a0;
+        --color-accent: #34d399;
+        --color-accent-text: #020806;
+        --color-accent-secondary: #a855f7;
+        --color-error: #ff7b7b;
+        --color-success: #34d399;
       }
       *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
       html, body { min-height: 100vh; font-family: system-ui, sans-serif; background: var(--color-bg); color: var(--color-text); }
@@ -42,9 +42,10 @@
           min-height: 0;
           height: min(780px, 90vh);
           border: 1px solid var(--color-border);
-          border-radius: 20px;
+          border-radius: 24px;
           overflow: hidden;
-          box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+          background: var(--color-bg);
+          box-shadow: 0 45px 110px rgba(0, 0, 0, 0.72), 0 0 60px rgba(52, 211, 153, 0.055);
           display: flex;
           flex-direction: column;
         }

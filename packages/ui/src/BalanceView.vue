@@ -402,9 +402,10 @@ onActivated(() => {
 
 <style scoped>
 .balance-view { display: flex; flex-direction: column; gap: 12px; }
-.hero { display: flex; flex-direction: column; align-items: center; gap: 4px; margin-top: 4px; }
+.hero { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; margin: 2px 0 8px; padding: 25px 16px 21px; overflow: hidden; border: 1px solid var(--color-border); border-radius: 18px; background: linear-gradient(145deg, rgba(52, 211, 153, 0.055), rgba(168, 85, 247, 0.025) 62%, rgba(255, 255, 255, 0.012)); }
+.hero::before { position: absolute; top: -75px; right: -45px; width: 160px; height: 160px; border: 1px solid rgba(168, 85, 247, 0.12); border-radius: 50%; content: ''; }
 .total { display: flex; align-items: baseline; gap: 6px; }
-.amount { font-size: 30px; font-weight: 700; font-family: monospace; }
+.amount { font-size: 34px; font-weight: 500; letter-spacing: -0.05em; }
 .unit { font-size: 16px; color: var(--color-text-muted); }
 .sats { color: var(--color-text-muted); font-size: 13px; }
 .usd { color: var(--color-accent); font-weight: 600; }
@@ -417,13 +418,18 @@ onActivated(() => {
   gap: 6px;
   background: var(--color-accent);
   border: none;
-  border-radius: 8px;
+  border: 1px solid transparent;
+  border-radius: 12px;
   color: var(--color-accent-text);
   cursor: pointer;
-  font-size: 14px;
-  font-weight: 600;
-  padding: 10px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 12px;
 }
+.action-btn:hover { box-shadow: 0 0 28px rgba(52, 211, 153, 0.2); transform: translateY(-1px); }
 .wallet-header {
   display: flex;
   align-items: baseline;
@@ -438,7 +444,7 @@ onActivated(() => {
 .breakdown {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: 8px;
+  border-radius: 14px;
   padding: 12px;
   display: flex;
   flex-direction: column;
@@ -449,7 +455,7 @@ onActivated(() => {
 .assets-summary {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: 8px;
+  border-radius: 14px;
   padding: 12px;
   display: flex;
   flex-direction: column;

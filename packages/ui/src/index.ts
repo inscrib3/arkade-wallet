@@ -1,3 +1,5 @@
+import './theme.css';
+
 export { default as WalletApp } from './WalletApp.vue';
 export { default as SetupScreen } from './SetupScreen.vue';
 export { default as UnlockScreen } from './UnlockScreen.vue';

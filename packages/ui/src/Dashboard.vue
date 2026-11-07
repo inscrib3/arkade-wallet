@@ -83,7 +83,10 @@ async function lock() {
 <template>
   <div class="dashboard">
     <header>
-      <a class="logo" href="https://inscrib3.com/" target="_blank" rel="noopener noreferrer"><img src="/image/inscrib3_logo.png" alt="Inscrib3" /></a>
+      <a class="logo" href="https://inscrib3.com/" target="_blank" rel="noopener noreferrer">
+        <img src="/image/logo.svg" alt="" />
+        <span>INSCRIB3</span>
+      </a>
       <button class="icon-btn" @click="lock" title="Lock wallet"><Icon name="lock" :size="18" /></button>
     </header>
 
@@ -171,40 +174,60 @@ async function lock() {
   padding: 8px 12px;
 }
 .funds-layer { color: var(--color-text-muted); font-size: 11px; font-weight: 500; text-transform: uppercase; }
-.dashboard { display: flex; flex-direction: column; min-height: 100vh; }
+.dashboard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 82% -8%, rgba(52, 211, 153, 0.08), transparent 32%),
+    radial-gradient(circle at -12% 78%, rgba(168, 85, 247, 0.06), transparent 34%),
+    var(--color-bg);
+}
 header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px;
+  min-height: 62px;
+  padding: 12px 20px;
   border-bottom: 1px solid var(--color-border);
+  background: rgba(5, 6, 6, 0.72);
+  backdrop-filter: blur(18px) saturate(140%);
 }
-.logo { display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 700; }
-.logo img { width: 16px; height: 19px; object-fit: contain; }
-.icon-btn { background: none; border: none; cursor: pointer; color: var(--color-text); display: flex; align-items: center; }
+.logo { display: flex; align-items: center; gap: 9px; color: var(--color-text); font-family: var(--font-mono); font-size: 11px; font-weight: 500; letter-spacing: 0.14em; text-decoration: none; }
+.logo img { width: 36px; height: 36px; object-fit: contain; }
+.icon-btn { width: 36px; height: 36px; display: grid; place-items: center; background: rgba(255, 255, 255, 0.035); border: 1px solid var(--color-border); border-radius: 10px; cursor: pointer; color: var(--color-text-muted); }
+.icon-btn:hover { border-color: var(--color-border-accent); color: var(--color-accent); background: rgba(52, 211, 153, 0.05); }
 .body { flex: 1; display: flex; flex-direction: column; overflow-y: auto; }
-.content { flex: 1; padding: 20px; overflow-y: auto; }
+.content { flex: 1; padding: 22px 20px 28px; overflow-y: auto; }
 .screen { display: flex; flex-direction: column; gap: 12px; }
-.screen h2 { font-size: 16px; font-weight: 700; }
+.screen h2 { font-size: 22px; font-weight: 500; letter-spacing: -0.035em; }
 .back { display: flex; align-items: center; gap: 4px; background: none; border: none; color: var(--color-text-muted); cursor: pointer; font-size: 13px; padding: 0; text-align: left; }
 .bottom-nav {
   display: flex;
   border-top: 1px solid var(--color-border);
-  background: var(--color-bg);
+  background: rgba(5, 6, 6, 0.88);
+  backdrop-filter: blur(18px) saturate(140%);
 }
 .bottom-nav button {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  position: relative;
+  gap: 4px;
   background: none;
   border: none;
   color: var(--color-text-muted);
   cursor: pointer;
-  font-size: 11px;
-  font-weight: 600;
-  padding: 10px 0 12px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 11px 0 13px;
 }
-.bottom-nav button.active { color: var(--color-accent); }
+.bottom-nav button::before { position: absolute; top: -1px; width: 28px; height: 1px; background: transparent; content: ''; }
+.bottom-nav button.active { color: var(--color-accent); background: linear-gradient(180deg, rgba(52, 211, 153, 0.07), transparent 70%); }
+.bottom-nav button.active::before { background: var(--color-accent); box-shadow: 0 0 12px rgba(52, 211, 153, 0.8); }
 </style>

@@ -4,8 +4,8 @@ export default defineConfig({
   extensionApi: 'chrome',
   modules: ['@wxt-dev/module-vue'],
   manifest: {
-    name: 'Inscrib3',
-    description: 'Bitcoin wallet for the Ark protocol',
+    name: 'Inscrib3 Wallet',
+    description: 'Your gateway to programmable Bitcoin.',
     icons: {
       16: '/icons/icon-16.png',
       32: '/icons/icon-32.png',
