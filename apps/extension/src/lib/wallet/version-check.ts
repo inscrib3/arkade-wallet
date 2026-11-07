@@ -2,8 +2,8 @@ import type { KeyValueStore } from '@inscrib3/core';
 
 // Chrome only auto-updates extensions with an update_url, which the Web Store
 // adds to the manifest. Sideloaded installs rely on this GitHub release check.
-export const VERSION_CHECK_ALARM_NAME = 'arkade-version-check';
-const VERSION_CHECK_INTERVAL_MINUTES = 12 * 60;
+// GitHub's unauthenticated API allows 60 requests/hour.
+const VERSION_CHECK_INTERVAL_SECONDS = 60 * 60;
 
 const CACHE_KEY = 'arkade:version-check';
 const DISMISSED_KEY = 'arkade:version-check:dismissed';
@@ -54,16 +54,10 @@ export function rememberDownloadedUpdates(store: KeyValueStore): void {
   });
 }
 
-export function scheduleVersionCheck(): void {
-  browser.alarms.create(VERSION_CHECK_ALARM_NAME, { periodInMinutes: VERSION_CHECK_INTERVAL_MINUTES });
-}
-
-// main() runs on every service-worker wake, and GitHub's unauthenticated API
-// allows 60 requests/hour.
 export async function checkForNewVersionIfDue(store: KeyValueStore): Promise<void> {
   const cached = await store.get<VersionCheckCache>(CACHE_KEY);
   const now = Math.floor(Date.now() / 1000);
-  if (cached && now - cached.checkedAt < VERSION_CHECK_INTERVAL_MINUTES * 60) return;
+  if (cached && now - cached.checkedAt < VERSION_CHECK_INTERVAL_SECONDS) return;
   await checkForNewVersion(store);
 }
 
@@ -89,7 +83,10 @@ export async function checkForNewVersion(store: KeyValueStore): Promise<void> {
 export async function getVersionInfo(store: KeyValueStore): Promise<VersionInfo> {
   const currentVersion = browser.runtime.getManifest().version;
   const canInstallByReloading = isStoreInstall();
-  const cached = await store.get<VersionCheckCache>(CACHE_KEY);
+  const stored = await store.get<VersionCheckCache>(CACHE_KEY);
+  // A build from before this check skipped store installs may have cached a
+  // GitHub release the store doesn't offer yet, which a reload can't install.
+  const cached = canInstallByReloading && stored?.releaseUrl ? undefined : stored;
   if (!cached?.latestVersion || !isNewer(cached.latestVersion, currentVersion)) {
     return { currentVersion, updateAvailable: false, latestVersion: cached?.latestVersion ?? null, releaseUrl: cached?.releaseUrl ?? null, canInstallByReloading };
   }

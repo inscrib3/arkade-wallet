@@ -6,7 +6,7 @@ import { savePendingRequest, loadPendingRequest, clearPendingRequest } from '../
 import { broadcastEvent, notifyUi } from './broadcast.js';
 import { encodeBigints, decodeBigints } from './bigint-wire.js';
 import { AUTO_LOCK_ALARM_NAME, scheduleAutoLock, cancelAutoLock } from '../wallet/auto-lock.js';
-import { VERSION_CHECK_ALARM_NAME, checkForNewVersion, getVersionInfo, dismissVersionUpdate } from '../wallet/version-check.js';
+import { checkForNewVersionIfDue, getVersionInfo, dismissVersionUpdate } from '../wallet/version-check.js';
 
 function ok(id: string, result: unknown): InternalResponse {
   return { id, result };
@@ -60,8 +60,6 @@ export class BackgroundRouter {
     browser.alarms.onAlarm.addListener((alarm) => {
       if (alarm.name === AUTO_LOCK_ALARM_NAME) {
         void this.manager.lock().then(() => broadcastEvent('lock'));
-      } else if (alarm.name === VERSION_CHECK_ALARM_NAME) {
-        void checkForNewVersion(this.store);
       }
     });
   }
@@ -357,6 +355,7 @@ export class BackgroundRouter {
 
       // --- Extension updates ---
       case 'wallet_getVersionInfo':
+        await checkForNewVersionIfDue(this.store);
         return ok(id, await getVersionInfo(this.store));
 
       case 'wallet_dismissVersionUpdate': {

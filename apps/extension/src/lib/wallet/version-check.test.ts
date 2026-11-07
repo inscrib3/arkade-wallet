@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'bun:test';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, setSystemTime, test } from 'bun:test';
 import type { KeyValueStore } from '@inscrib3/core';
 
 type UpdateListener = (details: { version: string }) => void;
@@ -14,7 +14,7 @@ let store: KeyValueStore;
     onUpdateAvailable: { addListener: (listener: UpdateListener) => (updateListener = listener) },
   },
 };
-const { checkForNewVersion, getVersionInfo, rememberDownloadedUpdates } = await import('./version-check.js');
+const { checkForNewVersion, checkForNewVersionIfDue, getVersionInfo, rememberDownloadedUpdates } = await import('./version-check.js');
 
 const STORE_MANIFEST = { version: '1.0.0', update_url: 'https://clients2.google.com/service/update2/crx' };
 const SIDELOADED_MANIFEST = { version: '1.0.0' };
@@ -62,6 +62,13 @@ describe('store install', () => {
     expect(info).toMatchObject({ updateAvailable: true, latestVersion: '1.1.0', canInstallByReloading: true, releaseUrl: null });
   });
 
+  test('ignores a GitHub release an older build cached, which a reload cannot install', async () => {
+    manifest = SIDELOADED_MANIFEST;
+    await checkForNewVersion(store);
+    manifest = STORE_MANIFEST;
+    expect((await getVersionInfo(store)).updateAvailable).toBe(false);
+  });
+
   test('stops offering it once the update is installed', async () => {
     updateListener({ version: '1.1.0' });
     manifest = { ...STORE_MANIFEST, version: '1.1.0' };
@@ -80,5 +87,30 @@ describe('sideloaded install', () => {
     expect(githubRequests).toBe(1);
     expect(info).toMatchObject({ updateAvailable: true, latestVersion: '1.1.0', canInstallByReloading: false });
     expect(info.releaseUrl).toContain('github.com');
+  });
+
+  describe('checking when the popup opens', () => {
+    const START = new Date('2026-11-07T08:00:00Z');
+    const FIFTY_NINE_MINUTES = 59 * 60 * 1000;
+    const ONE_HOUR = 60 * 60 * 1000;
+
+    afterEach(() => setSystemTime());
+
+    test('asks GitHub right away on the first open', async () => {
+      setSystemTime(START);
+      await checkForNewVersionIfDue(store);
+      expect(githubRequests).toBe(1);
+    });
+
+    test('asks GitHub at most once an hour', async () => {
+      setSystemTime(START);
+      await checkForNewVersionIfDue(store);
+      setSystemTime(new Date(START.getTime() + FIFTY_NINE_MINUTES));
+      await checkForNewVersionIfDue(store);
+      expect(githubRequests).toBe(1);
+      setSystemTime(new Date(START.getTime() + ONE_HOUR));
+      await checkForNewVersionIfDue(store);
+      expect(githubRequests).toBe(2);
+    });
   });
 });
