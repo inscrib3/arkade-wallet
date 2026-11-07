@@ -1,6 +1,6 @@
 # Inscrib3
 
-A non-custodial Bitcoin wallet for the [Ark protocol](https://arkade.money), shipped as both a browser extension and a PWA.
+A non-custodial Bitcoin wallet for the [Ark protocol]([https://arkadeos.com/), shipped as both a browser extension and a PWA.
 
 > **Experimental — use at your own risk.** This is early software that moves real Bitcoin. No warranties, no guaranteed support. Don't put in more than you can afford to lose.
 
