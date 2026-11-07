@@ -15,7 +15,7 @@ Please include:
 
 ## Scope
 
-In scope: the browser extension, the PWA, and the shared `packages/core`/`packages/ui` code in this repo — key generation/storage, the approval/messaging layer between a dApp and the wallet, transaction signing, and network communication with an Ark server.
+In scope: the browser extension, the PWA, and the shared `packages/core`/`packages/ui` code in this repo — key generation/storage, the approval/messaging layer between an app and the wallet, transaction signing, and network communication with an Ark server.
 
 Out of scope: the Ark protocol/server itself, the `@arkade-os/sdk` dependency, and third-party services (e.g. the Satora and Arkade RFQ Lightning swap providers) — report those upstream.
 

@@ -10,5 +10,8 @@ export function createPwaKeyValueStore(): KeyValueStore {
     async set<T>(key: string, value: T): Promise<void> {
       localStorage.setItem(key, JSON.stringify(value));
     },
+    async clear(): Promise<void> {
+      localStorage.clear();
+    },
   };
 }

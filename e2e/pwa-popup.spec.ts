@@ -2,7 +2,7 @@ import { test, expect, type Page } from '@playwright/test';
 import { startDappServer } from './dapp-server.js';
 import { createWallet, unlockWallet } from './fixtures.js';
 
-// Different port from the extension suite's dApp server, which may still be
+// Different port from the extension suite's app server, which may still be
 // shutting down.
 const DAPP_PORT = 8766;
 const DAPP_URL = `http://localhost:${DAPP_PORT}`;
@@ -22,7 +22,7 @@ async function trackPopupMessages(dapp: Page): Promise<void> {
   });
 }
 
-// What a dApp using the PWA fallback (no extension installed) does.
+// What an app using the PWA fallback (no extension installed) does.
 test.describe('PWA popup connect/send flow (no extension installed)', () => {
   let stopDappServer: () => Promise<void>;
 

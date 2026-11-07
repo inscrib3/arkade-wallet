@@ -1,4 +1,4 @@
-// Methods a dApp may call. The type derives from the array so the runtime
+// Methods an app may call. The type derives from the array so the runtime
 // gate can't drift from it.
 export const RPC_METHODS = [
   'arkade_connect',
@@ -85,6 +85,7 @@ export const INTERNAL_METHODS = [
   'wallet_isSettling',
   'wallet_getSettleProgress',
   'wallet_resetLocalCache',
+  'wallet_resetWallet',
   'wallet_getVersionInfo',
   'wallet_dismissVersionUpdate',
   'approval_respond',
@@ -180,14 +181,14 @@ export function isArkadeEventName(name: string): name is ArkadeEventName {
 }
 
 // Popup-only events: `fundsReceived` carries amounts, so it never goes to tabs.
-export type UiOnlyEventName = 'fundsReceived';
+export type UiOnlyEventName = 'fundsReceived' | 'reset';
 export type PageEventName = ArkadeEventName | UiOnlyEventName;
 
 export interface PageEvent {
   _arkadeEvent: true;
   event: PageEventName;
   data?: unknown;
-  // Set for events scoped to one dApp; content.ts only relays them to that origin.
+  // Set for events scoped to one app; content.ts only relays them to that origin.
   origin?: string;
 }
 

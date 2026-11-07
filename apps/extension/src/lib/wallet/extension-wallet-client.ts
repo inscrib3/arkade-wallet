@@ -33,6 +33,7 @@ export function createExtensionWalletClient(): WalletClient {
 
     getSpendableVtxos: () => sendToBackground('wallet_getSpendableVtxos'),
     resetLocalCache: (password) => sendToBackground('wallet_resetLocalCache', { password }),
+    resetWallet: (password) => sendToBackground('wallet_resetWallet', { password }),
 
 
     signMessage: (message) => sendToBackground('wallet_signMessage', { message }),
@@ -76,6 +77,7 @@ export function createExtensionWalletClient(): WalletClient {
           event === 'unlock' ||
           event === 'networkChanged' ||
           event === 'accountChanged' ||
+          event === 'reset' ||
           event === 'fundsReceived'
         ) {
           callback(event as WalletClientEvent, (message as { data?: unknown }).data);

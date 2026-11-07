@@ -11,7 +11,7 @@ A non-custodial Bitcoin wallet for the [Ark protocol]([https://arkadeos.com/), s
 - On-chain in and out: receive to a boarding address and move it into Ark, or send to any Bitcoin address through a collaborative exit with the Ark server.
 - Ark assets: view and send the assets your wallet holds.
 - Multiple accounts and imported seeds under one password, coin control, auto-lock.
-- Same wallet, two shells: a browser extension for dApp integration, and an installable PWA that needs no install step.
+- Same wallet, two shells: a browser extension for app integration, and an installable PWA that needs no install step.
 - Unilateral exit — you can always recover funds on-chain yourself, without the Ark server's cooperation. It is an emergency path: every off-chain step behind your coins has to be published on-chain, so fees can exceed a small balance. Settling first (one fresh VTXO) keeps it cheapest.
 
 ## Repo structure
@@ -87,7 +87,7 @@ Every push to `main` runs CI and, if it passes, publishes the extension as a Git
 
 Defaults to Bitcoin mainnet. A Mutinynet testnet preset is also available from Settings inside the app (or type any custom Ark server URL there) — useful for testing without real funds.
 
-## Connecting a dApp
+## Connecting an app
 
 If the extension is installed, it injects `window.arkade` into every page:
 
@@ -100,7 +100,7 @@ if (window.arkade) {
 
 Without the extension, the PWA can be opened as a popup and will hand back a connect/send result via `postMessage`. Ark addresses only for sends in this version; plain on-chain Bitcoin addresses aren't supported yet.
 
-Full API, events, errors and the popup protocol: [docs/dapp-integration.md](docs/dapp-integration.md).
+Full API, events, errors and the popup protocol: [app integration guide](docs/dapp-integration.md).
 
 ## Contributing / support
 

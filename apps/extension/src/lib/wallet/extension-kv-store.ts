@@ -9,5 +9,8 @@ export function createExtensionKeyValueStore(): KeyValueStore {
     async set<T>(key: string, value: T): Promise<void> {
       await browser.storage.local.set({ [key]: value });
     },
+    async clear(): Promise<void> {
+      await browser.storage.local.clear();
+    },
   };
 }

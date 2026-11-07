@@ -2,7 +2,7 @@ import type { Page } from '@playwright/test';
 import { test, expect, createWallet, waitForArkade, DAPP_URL, DAPP_PORT } from './fixtures.js';
 import { startDappServer } from './dapp-server.js';
 
-// Test-only globals stashed on the dApp page.
+// Test-only globals stashed on the app page.
 declare global {
   interface Window {
     arkade: {
@@ -33,7 +33,7 @@ declare global {
 const FAKE_ASSET_ID = 'a'.repeat(64);
 
 // Reject-path tail: wait for the popup, check it, reject, and confirm the
-// dApp promise rejects. No funds needed: wallet calls only run on approval.
+// App promise rejects. No funds needed: wallet calls only run on approval.
 async function rejectApprovalAndExpectRejection(
   approvalPagePromise: Promise<Page>,
   dapp: Page,
@@ -49,8 +49,8 @@ async function rejectApprovalAndExpectRejection(
   expect(result.error).toMatch(/reject/i);
 }
 
-// Every approval-gated dApp request type, plus the background -> page event relay.
-test.describe.serial('dApp connect / send / broadcast flow', () => {
+// Every approval-gated app request type, plus the background -> page event relay.
+test.describe.serial('app connect / send / broadcast flow', () => {
   let popup: Page;
   let dapp: Page;
   let stopDappServer: () => Promise<void>;
@@ -274,7 +274,7 @@ test.describe.serial('dApp connect / send / broadcast flow', () => {
     expect(response.error).not.toMatch(/account or network changed/);
   });
 
-  test('lock: background broadcast reaches the connected dApp page', async () => {
+  test('lock: background broadcast reaches the connected app page', async () => {
     await dapp.evaluate(() => {
       window.__lockEvents = [];
       window.arkade.on('lock', () => window.__lockEvents.push(Date.now()));

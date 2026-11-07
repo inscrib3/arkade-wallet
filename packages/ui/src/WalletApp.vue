@@ -40,6 +40,8 @@ function onWalletEvent(event: string) {
     screen.value = 'unlock';
   } else if (event === 'unlock') {
     void refreshScreen();
+  } else if (event === 'reset') {
+    screen.value = 'setup';
   } else if (event === 'accountChanged' || event === 'networkChanged') {
     dashboardKey.value++;
   }

@@ -64,6 +64,10 @@ export function createPwaWalletClient(): WalletClient {
 
     getSpendableVtxos: () => manager.getSpendableVtxos(),
     resetLocalCache: (password) => manager.resetLocalCache(password),
+    async resetWallet(password) {
+      await manager.resetWallet(password);
+      emit('reset');
+    },
 
 
     signMessage: (message) => manager.signMessage(message),

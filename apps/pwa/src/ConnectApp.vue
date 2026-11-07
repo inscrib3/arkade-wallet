@@ -4,7 +4,7 @@ import { describeNetwork } from '@inscrib3/core';
 import { SetupScreen, UnlockScreen, ApprovalRequestBody, useWalletClient } from '@inscrib3/ui';
 import type { PopupRequest } from './popup-request.js';
 
-// Mounted instead of WalletApp when a dApp opens this as a popup; answers
+// Mounted instead of WalletApp when an app opens this as a popup; answers
 // the opener via postMessage.
 const props = defineProps<{ request: PopupRequest }>();
 
@@ -80,7 +80,7 @@ async function approve() {
     screen.value = 'done';
     setTimeout(() => window.close(), 800);
   } catch (e: unknown) {
-    // Tell the dApp instead of leaving its promise hanging.
+    // Tell the app instead of leaving its promise hanging.
     sendError.value = String(e);
     window.opener?.postMessage({ type: 'inscrib3:send_failed', error: sendError.value }, request.origin);
   } finally {

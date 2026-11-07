@@ -40,7 +40,7 @@ const MENU: MenuItem[] = [
   { id: 'seed', title: 'Seed phrase', subtitle: 'Reveal and back up your recovery words', icon: 'key' },
   { id: 'sites', title: 'Connected sites', subtitle: 'Review and revoke sites you approved', icon: 'link' },
   { id: 'recovery', title: 'Recovery', subtitle: 'Unilateral exit - move funds onchain alone', icon: 'shield' },
-  { id: 'advanced', title: 'Advanced', subtitle: 'Reset the local cache and re-sync', icon: 'alert-triangle' },
+  { id: 'advanced', title: 'Advanced', subtitle: 'Reset local data or remove the wallet', icon: 'alert-triangle' },
 ];
 
 // Rows backed by optional WalletClient methods are hidden when absent.

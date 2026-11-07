@@ -80,6 +80,7 @@ function memoryStore(): KeyValueStore {
   return {
     get: async <T>(key: string) => map.get(key) as T | undefined,
     set: async <T>(key: string, value: T) => void map.set(key, value),
+    clear: async () => void map.clear(),
   };
 }
 
@@ -120,7 +121,7 @@ describe('BackgroundRouter sender gating', () => {
     expect(calls).toEqual([]);
   });
 
-  test('our own windows cannot call dApp methods', async () => {
+  test('our own windows cannot call app methods', async () => {
     const res = await send('arkade_sendToAddress', { address: 'a', amount: 1 }, internal);
     expect(res.error).toMatch(/only available to web pages/);
   });
@@ -156,7 +157,7 @@ describe('BackgroundRouter unconnected origin', () => {
     expect(calls).toEqual([]);
   });
 
-  // Regression: a connected dApp polling a read kept the wallet unlocked forever.
+  // Regression: a connected app polling a read kept the wallet unlocked forever.
   test('no web page extends auto-lock, connected or not; the wallet\'s own windows do', async () => {
     await send('arkade_isConnected', undefined, page);
     connect(DAPP);

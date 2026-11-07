@@ -47,7 +47,7 @@ export class BackgroundRouter {
         if (!msg || typeof msg !== 'object' || !('id' in msg) || !('method' in msg)) {
           return undefined;
         }
-        // Only our own windows use the bigint encoding; dApp traffic is plain JSON.
+        // Only our own windows use the bigint encoding; app traffic is plain JSON.
         const internal = isInternalSender(sender);
         const request = internal ? { ...msg, params: decodeBigints(msg.params) } : msg;
         this._handle(request as AnyRequest, sender)
@@ -159,7 +159,7 @@ export class BackgroundRouter {
   private async _handle(msg: AnyRequest, sender: Browser.runtime.MessageSender): Promise<InternalResponse> {
     const { id, method, params } = msg;
 
-    // Internal methods only from our own windows; dApp methods only via content.ts.
+    // Internal methods only from our own windows; app methods only via content.ts.
     const internal = isInternalSender(sender);
     if (isInternalMethod(method) && !internal) {
       return err(id, 'This method is not available to web pages');
@@ -171,14 +171,14 @@ export class BackgroundRouter {
     const origin = sender.origin ?? (sender.url ? new URL(sender.url).origin : '');
 
     const connected = !internal && (await isConnected(origin));
-    // Every dApp method except the connection handshake needs a prior
+    // Every app method except the connection handshake needs a prior
     // connect(); new methods are gated by default.
     if (isRpcMethod(method) && !OPEN_RPC_METHODS.has(method) && !connected) {
       return err(id, 'Not connected. Call connect() first.');
     }
 
     // Only activity in the wallet's own windows extends auto-lock (approving a
-    // dApp request included): a connected page that polls can't keep it open.
+    // app request included): a connected page that polls can't keep it open.
     if (method !== 'wallet_lock' && this.manager.isUnlocked() && internal) {
       scheduleAutoLock();
     }
@@ -411,7 +411,7 @@ export class BackgroundRouter {
           return err(id, `Saved, but the new server couldn't be reached - unlock to try again. ${String(e)}`);
         }
         await broadcastEvent('networkChanged', network);
-        // The address differs per network, so connected dApps need the new one.
+        // The address differs per network, so connected apps need the new one.
         await this._broadcastAccountSwitch();
         return ok(id, true);
       }
@@ -460,6 +460,14 @@ export class BackgroundRouter {
         await this.manager.resetToPrimaryAccount();
         return ok(id, true);
 
+      case 'wallet_resetWallet': {
+        const { password } = params as { password: string };
+        await this.manager.resetWallet(password);
+        cancelAutoLock();
+        await notifyUi('reset');
+        return ok(id, true);
+      }
+
       // --- Approval window responses ---
       case 'approval_respond': {
         const { approvalId, approved } = params as { approvalId: string; approved: boolean };
@@ -477,7 +485,7 @@ export class BackgroundRouter {
         return ok(id, await this._performApprovedAction(pending.method, pending.params, pending.origin));
       }
 
-      // --- dApp RPC (relayed by content.ts) ---
+      // --- App RPC (relayed by content.ts) ---
       case 'arkade_connect':
         if (connected) return ok(id, [await this.manager.getAddress()]);
         return this._approveThenPerform(id, { type: 'connect', origin }, method, params, 'User rejected the connection request');

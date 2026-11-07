@@ -34,7 +34,7 @@ export function nextApprovalId(): string {
   return `approval-${Date.now()}-${++_counter}`;
 }
 
-// Limits stacked popups from a spammy dApp (approval fatigue).
+// Limits stacked popups from a spammy app (approval fatigue).
 const MAX_PENDING_APPROVALS_PER_ORIGIN = 3;
 
 // Counted before any await; counting `pending` would let concurrent calls

@@ -1,6 +1,5 @@
 import {
   Wallet,
-  MnemonicIdentity,
   RestArkProvider,
   RestIndexerProvider,
   EsploraProvider,
@@ -45,7 +44,7 @@ import { IncomingFundsFilter, type IncomingFundsSummary } from './incoming-funds
 import { ExitService, type SerializableExitProgress } from './exit-service.js';
 import { AssetService, type AssetInfo } from './asset-service.js';
 import { toHistoryEntry, type TxHistoryEntry } from './tx-history.js';
-import { accountKeyPath, deriveAccountDescriptor } from './account-derivation.js';
+import { accountKeyPath, deriveAccountIdentity, deriveLegacyAccountIdentity, legacyAccountKeyPath } from './account-derivation.js';
 import {
   loadAccounts,
   saveAccounts,
@@ -308,6 +307,36 @@ export class WalletManager {
     }
   }
 
+  // Password-gated destructive reset. Only databases owned by this wallet are
+  // deleted; unrelated IndexedDB data on the same origin is left untouched.
+  async resetWallet(password: string): Promise<void> {
+    const active = await this._resolveActiveAccountOrDefault();
+    await this._decryptSeedOrThrow(active.seedId, password);
+    await this.lock();
+    await this.deleteArkadeDatabases();
+    await this.store.clear();
+  }
+
+  private async deleteArkadeDatabases(): Promise<void> {
+    if (typeof indexedDB === 'undefined' || typeof indexedDB.databases !== 'function') return;
+    const databases = await indexedDB.databases();
+    const names = databases
+      .map((database) => database.name)
+      .filter((name): name is string => typeof name === 'string' && /^arkade-(wallet|contracts|intents)-/.test(name));
+    await Promise.all(
+      names.map(
+        (name) =>
+          new Promise<void>((resolve, reject) => {
+            const request = indexedDB.deleteDatabase(name);
+            request.onsuccess = () => resolve();
+            request.onerror = () => reject(request.error ?? new Error(`Could not delete ${name}`));
+            // Deletion remains queued and completes when a stale connection closes.
+            request.onblocked = () => resolve();
+          }),
+      ),
+    );
+  }
+
   // Listeners survive lock/unlock; only the underlying watcher restarts.
   onIncomingFunds(callback: (funds: IncomingFundsSummary) => void): () => void {
     this.fundsListeners.add(callback);
@@ -418,7 +447,7 @@ export class WalletManager {
     return this.getWalletOrThrow().getAddress();
   }
 
-  // The raw (untweaked) x-only key, for dApps that build their own scripts
+  // The raw (untweaked) x-only key, for apps that build their own scripts
   // naming this wallet; getAddress() only exposes the tweaked output key.
   async getXOnlyPublicKey(): Promise<string> {
     this.getWalletOrThrow();
@@ -746,14 +775,15 @@ export class WalletManager {
     this.seedId = seedId;
     this.accountIndex = accountIndex;
     const isMainnet = network === 'bitcoin';
-    // Account 0 keeps the SDK's default derivation that existing funds rely on;
-    // higher accounts use an explicit BIP86 descriptor.
-    const identity =
-      accountIndex === 0
-        ? MnemonicIdentity.fromMnemonic(mnemonic, { isMainnet })
-        : MnemonicIdentity.fromMnemonic(mnemonic, {
-            descriptor: deriveAccountDescriptor(mnemonic, isMainnet, accountIndex),
-          });
+    const account = (await loadAccounts(this.store)).find(
+      (candidate) => (Number.isFinite(candidate.seedId) ? candidate.seedId : 0) === seedId && candidate.index === accountIndex,
+    );
+    // Accounts created before the derivation fix have no mode marker. Preserve
+    // their old keys; new accounts increment only the final child number.
+    const usesAddressIndex = accountIndex === 0 || account?.derivationMode === 'address-index';
+    const identity = usesAddressIndex
+      ? deriveAccountIdentity(mnemonic, isMainnet, accountIndex)
+      : deriveLegacyAccountIdentity(mnemonic, isMainnet, accountIndex);
 
     const indexerProvider = new RestIndexerProvider(arkServerUrl);
     const onchainProvider = new EsploraProvider(esploraUrl);
@@ -821,7 +851,13 @@ export class WalletManager {
     const accounts = await loadAccounts(this.store);
     if (!this.network) return accounts;
     const isMainnet = this.network === 'bitcoin';
-    return accounts.map((a) => ({ ...a, derivationPath: accountKeyPath(isMainnet, a.index) }));
+    return accounts.map((a) => ({
+      ...a,
+      derivationPath:
+        a.index === 0 || a.derivationMode === 'address-index'
+          ? accountKeyPath(isMainnet, a.index)
+          : legacyAccountKeyPath(isMainnet, a.index),
+    }));
   }
 
   async getActiveAccount(): Promise<ActiveAccount> {
@@ -871,7 +907,12 @@ export class WalletManager {
       .filter((a) => (Number.isFinite(a.seedId) ? a.seedId : 0) === seedId)
       .map((a) => a.index);
     const nextIndex = sameSeedIndices.length === 0 ? 0 : Math.max(...sameSeedIndices) + 1;
-    const info: AccountInfo = { seedId, index: nextIndex, label: label?.trim() || `Account ${accounts.length + 1}` };
+    const info: AccountInfo = {
+      seedId,
+      index: nextIndex,
+      label: label?.trim() || `Account ${accounts.length + 1}`,
+      derivationMode: 'address-index',
+    };
     await saveAccounts(this.store, [...accounts, info]);
     await saveActiveAccount(this.store, { seedId, index: nextIndex });
     try {

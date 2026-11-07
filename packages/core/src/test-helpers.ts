@@ -9,5 +9,8 @@ export function inMemoryStore(): KeyValueStore {
     async set<T>(key: string, value: T): Promise<void> {
       map.set(key, value);
     },
+    async clear(): Promise<void> {
+      map.clear();
+    },
   };
 }

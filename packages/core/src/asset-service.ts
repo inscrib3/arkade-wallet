@@ -44,7 +44,7 @@ export class AssetService {
     }
   }
 
-  // SDK balances are bigint; returned as number to match the dApp-facing API.
+  // SDK balances are bigint; returned as number to match the app-facing API.
   async getAssets(wallet: IWallet): Promise<AssetInfo[]> {
     const { assets } = await wallet.getBalance();
     return Promise.all(

@@ -9,6 +9,9 @@ export interface AccountInfo {
   seedId: number;
   index: number;
   label: string;
+  // Absent on accounts created before the final-index derivation fix. Those
+  // retain the legacy hardened-account path so existing funds stay reachable.
+  derivationMode?: 'address-index';
   // Added by WalletManager.listAccounts while unlocked, since the coin type
   // depends on the network. Never stored.
   derivationPath?: string;

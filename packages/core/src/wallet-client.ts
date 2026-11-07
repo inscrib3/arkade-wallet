@@ -25,13 +25,14 @@ export interface AssetEntry {
   metadata?: { name?: string; ticker?: string; decimals?: number; icon?: string };
 }
 
-// 'accountChanged' has no payload, so unlike the dApp-facing 'accountsChanged'
+// 'accountChanged' has no payload, so unlike the app-facing 'accountsChanged'
 // it needs no per-origin scoping.
 export type WalletClientEvent =
   | 'lock'
   | 'unlock'
   | 'networkChanged'
   | 'accountChanged'
+  | 'reset'
   // payload: IncomingFundsSummary
   | 'fundsReceived';
 
@@ -75,6 +76,8 @@ export interface WalletClient {
 
   // Wipes the local VTXO/tx cache and resyncs; never touches the seed.
   resetLocalCache?(password: string): Promise<void>;
+  // Permanently removes the wallet and every local setting/cache.
+  resetWallet(password: string): Promise<void>;
 
   signMessage?(message: string): Promise<SignedMessage>;
 
@@ -110,7 +113,7 @@ export interface WalletClient {
 
   onEvent(callback: (event: WalletClientEvent, data?: unknown) => void): () => void;
 
-  // Extension only: per-origin dApp permissions.
+  // Extension only: per-origin app permissions.
   getConnectedOrigins?(): Promise<string[]>;
   revokeOrigin?(origin: string): Promise<void>;
 }

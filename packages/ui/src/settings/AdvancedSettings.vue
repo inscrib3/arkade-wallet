@@ -6,69 +6,105 @@ const emit = defineEmits<{ reset: [] }>();
 
 const client = useWalletClient();
 
-// Only clears the local VTXO/tx cache, never the seed. Two-step confirm.
-const resetConfirming = ref(false);
-const resetPassword = ref('');
-const resetLoading = ref(false);
-const resetError = ref('');
+type ResetAction = 'cache' | 'wallet';
 
-function startReset() {
-  resetError.value = '';
-  resetConfirming.value = true;
+const action = ref<ResetAction | null>(null);
+const password = ref('');
+const loading = ref(false);
+const error = ref('');
+
+function startReset(nextAction: ResetAction) {
+  error.value = '';
+  action.value = nextAction;
 }
 
 function cancelReset() {
-  resetConfirming.value = false;
-  resetPassword.value = '';
-  resetError.value = '';
+  action.value = null;
+  password.value = '';
+  error.value = '';
 }
 
 async function confirmReset() {
-  if (!client.resetLocalCache) return;
-  resetError.value = '';
-  resetLoading.value = true;
+  if (!action.value) return;
+  error.value = '';
+  loading.value = true;
   try {
-    await client.resetLocalCache(resetPassword.value);
-    emit('reset');
+    if (action.value === 'wallet') {
+      await client.resetWallet(password.value);
+    } else if (client.resetLocalCache) {
+      await client.resetLocalCache(password.value);
+      emit('reset');
+    }
   } catch (e: unknown) {
     const msg = String(e);
-    resetError.value = msg.includes('INCORRECT_PASSWORD')
+    error.value = msg.includes('INCORRECT_PASSWORD')
       ? 'Incorrect password'
       : msg.includes('SERVER_UNREACHABLE')
         ? 'Could not reach the Ark server - try again'
         : msg;
   } finally {
-    resetLoading.value = false;
-    resetPassword.value = '';
+    loading.value = false;
+    password.value = '';
   }
 }
 </script>
 
 <template>
   <section class="settings-view">
-    <template v-if="!resetConfirming">
-      <button type="button" class="danger-outline" @click="startReset">Reset local cache</button>
-      <p class="hint">Re-sync balance and history. Your seed is not affected.</p>
+    <template v-if="!action">
+      <div class="action-card">
+        <h3>Local data</h3>
+        <p class="hint">Clear cached transactions and re-sync your balance and history. Your seed phrase is not affected.</p>
+        <button type="button" class="secondary" @click="startReset('cache')">Reset local cache</button>
+      </div>
+
+      <div class="action-card danger-zone">
+        <h3>Reset wallet</h3>
+        <p class="hint warning">
+          Permanently remove every seed phrase, account, setting and cache from this device. You can recover funds only with your seed phrase backup.
+        </p>
+        <button type="button" class="danger-outline" @click="startReset('wallet')">Reset wallet</button>
+      </div>
     </template>
 
     <template v-else>
       <p class="hint warning">
-        Wipes this wallet's local VTXO/transaction cache and re-syncs from the Ark server. Your seed phrase is never touched - this can't lose funds, but any not-yet-synced local state is discarded.
+        <template v-if="action === 'wallet'">
+          This deletes the wallet and all its local data from this device. This action cannot be undone. Make sure every seed phrase is backed up before continuing.
+        </template>
+        <template v-else>
+          This wipes the local transaction cache and re-syncs from the Ark server. Your seed phrase is not affected.
+        </template>
       </p>
       <label>
         Password
         <input
           type="password"
           placeholder="Enter your password"
-          v-model="resetPassword"
+          v-model="password"
           @keydown.enter="confirmReset"
+          autofocus
         />
       </label>
-      <p v-if="resetError" class="error">{{ resetError }}</p>
-      <button type="button" class="danger" @click="confirmReset" :disabled="resetLoading || !resetPassword">
-        {{ resetLoading ? 'Resetting…' : 'Yes, wipe local cache and re-sync' }}
+      <p v-if="error" class="error">{{ error }}</p>
+      <button type="button" class="danger" @click="confirmReset" :disabled="loading || !password">
+        {{ loading ? 'Resetting…' : action === 'wallet' ? 'Delete everything and reset' : 'Reset cache and re-sync' }}
       </button>
-      <button type="button" class="secondary" @click="cancelReset" :disabled="resetLoading">Cancel</button>
+      <button type="button" class="secondary" @click="cancelReset" :disabled="loading">Cancel</button>
     </template>
   </section>
 </template>
+
+<style scoped>
+.action-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+}
+.action-card h3 { font-size: 14px; color: var(--color-text); }
+.danger-zone { border-color: rgba(255, 107, 107, 0.4); }
+</style>

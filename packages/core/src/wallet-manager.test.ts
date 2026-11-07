@@ -551,7 +551,7 @@ describe('WalletManager accounts', () => {
     await expect(manager.addAccount('Savings')).rejects.toThrow(/SERVER_UNREACHABLE/);
     expect(await manager.listAccounts()).toEqual([
       { seedId: 0, index: 0, label: 'Account 1' },
-      { seedId: 0, index: 1, label: 'Savings' },
+      { seedId: 0, index: 1, label: 'Savings', derivationMode: 'address-index' },
     ]);
     expect(await manager.getActiveAccount()).toEqual({ seedId: 0, index: 1 });
   });
@@ -641,7 +641,12 @@ describe('WalletManager accounts', () => {
     withPassword(manager, 'shared-password');
     await expect(manager.addAccount('Third')).rejects.toThrow(/SERVER_UNREACHABLE/);
     const accounts = await manager.listAccounts();
-    expect(accounts.find((a) => a.label === 'Third')).toEqual({ seedId: 0, index: 2, label: 'Third' });
+    expect(accounts.find((a) => a.label === 'Third')).toEqual({
+      seedId: 0,
+      index: 2,
+      label: 'Third',
+      derivationMode: 'address-index',
+    });
   });
 
   // restore() shares create(): a new seed must not inherit old accounts.
@@ -820,6 +825,30 @@ describe('WalletManager.resetLocalCache', () => {
     withWallet(manager, { clear: async () => { clearCalled = true; } });
     await expect(manager.resetLocalCache('right-password')).rejects.toThrow(/SERVER_UNREACHABLE/);
     expect(clearCalled).toBe(true);
+  });
+});
+
+describe('WalletManager.resetWallet', () => {
+  test('rejects an incorrect password without deleting storage', async () => {
+    const store = inMemoryStore();
+    await saveEncryptedMnemonic(store, await encryptMnemonic('some mnemonic words', 'right-password'));
+    await store.set('custom-setting', 'keep-me');
+    const manager = new WalletManager(store);
+
+    await expect(manager.resetWallet('wrong-password')).rejects.toThrow(/INCORRECT_PASSWORD/);
+    expect(await manager.isCreated()).toBe(true);
+    expect(await store.get('custom-setting')).toBe('keep-me');
+  });
+
+  test('deletes the seed and all key-value storage after password verification', async () => {
+    const store = inMemoryStore();
+    await saveEncryptedMnemonic(store, await encryptMnemonic('some mnemonic words', 'right-password'));
+    await store.set('custom-setting', 'delete-me');
+    const manager = new WalletManager(store);
+
+    await manager.resetWallet('right-password');
+    expect(await manager.isCreated()).toBe(false);
+    expect(await store.get('custom-setting')).toBeUndefined();
   });
 });
 

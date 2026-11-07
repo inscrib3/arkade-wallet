@@ -1,4 +1,4 @@
-# dApp integration
+# App integration
 
 A web page can talk to this wallet in two ways:
 
@@ -8,7 +8,7 @@ A web page can talk to this wallet in two ways:
 | What you can do | Everything below | Connect, and send BTC to an Ark address |
 | Use when | The user has the extension installed | Fallback when `window.arkade` is missing |
 
-All amounts are **satoshis, as positive integers**. Sends go to **Ark addresses** only (`ark1…` on mainnet, `tark1…` on Mutinynet); onchain and Lightning destinations are not accepted from dApps.
+All amounts are **satoshis, as positive integers**. Sends go to **Ark addresses** only (`ark1…` on mainnet, `tark1…` on Mutinynet); onchain and Lightning destinations are not accepted from apps.
 
 ## Extension: `window.arkade`
 
