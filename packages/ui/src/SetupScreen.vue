@@ -3,6 +3,7 @@ import { ref } from 'vue';
 import { useWalletClient } from './wallet-client-key.js';
 import { useCopyToClipboard } from './composables/useCopyToClipboard.js';
 import Icon from './Icon.vue';
+import AppVersion from './AppVersion.vue';
 
 const client = useWalletClient();
 
@@ -182,6 +183,8 @@ async function submitRestore() {
         {{ loading ? 'Restoring…' : 'Restore wallet' }}
       </button>
     </template>
+
+    <AppVersion />
   </div>
 </template>
 

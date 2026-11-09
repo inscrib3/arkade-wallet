@@ -24,6 +24,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -63,6 +65,7 @@ jobs:
         env:
           # The in-extension update check reads this repo's releases.
           WXT_RELEASES_REPO: ${{ github.repository }}
+          VITE_APP_VERSION: ${{ steps.version.outputs.version }}
         run: cd apps/extension && bun run build && bun run zip
 
       - name: Checksum the release
@@ -79,7 +82,8 @@ jobs:
           generate_release_notes: true
 
   pwa-build:
-    needs: ci
+    # The extension job picks the version both apps show.
+    needs: [ci, extension]
     runs-on: ubuntu-latest
     steps:
       # <user>.github.io is one origin shared by every Pages site on the
@@ -101,6 +105,8 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Build PWA
+        env:
+          VITE_APP_VERSION: ${{ needs.extension.outputs.version }}
         run: cd apps/pwa && bun run build
 
       - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useWalletClient } from './wallet-client-key.js';
+import AppVersion from './AppVersion.vue';
 
 const client = useWalletClient();
 const emit = defineEmits<{ unlocked: [] }>();
@@ -93,6 +94,8 @@ function onKeydown(e: KeyboardEvent) {
         {{ recovering ? 'Resetting…' : 'Reset to primary account' }}
       </button>
     </template>
+
+    <AppVersion />
   </div>
 </template>
 
