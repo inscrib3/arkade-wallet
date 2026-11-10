@@ -27,6 +27,9 @@ export function createExtensionWalletClient(): WalletClient {
     sendOnchain: (address, amount) => sendToBackground('wallet_sendOnchain', { address, amount }),
     sendAsset: (address, assets, bitcoinAmount, selectedVtxos) =>
       sendToBackground('wallet_sendAsset', { address, assets, bitcoinAmount, selectedVtxos }),
+    issueAsset: (input) => sendToBackground('wallet_issueAsset', input),
+    reissueAsset: (input) => sendToBackground('wallet_reissueAsset', input),
+    burnAsset: (input) => sendToBackground('wallet_burnAsset', input),
     settle: () => sendToBackground('wallet_settle'),
     isSettling: () => sendToBackground('wallet_isSettling'),
     getSettleProgress: () => sendToBackground('wallet_getSettleProgress'),

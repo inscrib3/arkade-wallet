@@ -7,6 +7,7 @@ import ReceiveView from './ReceiveView.vue';
 import SettingsPanel from './SettingsPanel.vue';
 import Activity from './Activity.vue';
 import Assets from './Assets.vue';
+import AssetCreate from './AssetCreate.vue';
 import Icon from './Icon.vue';
 import type { IncomingFundsSummary } from '@inscrib3/core';
 
@@ -21,6 +22,7 @@ type Screen =
   | { kind: 'home' }
   | { kind: 'send'; asset: string }
   | { kind: 'receive' }
+  | { kind: 'create-asset' }
   | { kind: 'ark-asset'; assetId: string };
 
 const section = ref<Section>('home');
@@ -107,6 +109,7 @@ async function lock() {
             @send="openSend('btc')"
             @receive="screen = { kind: 'receive' }"
             @open-asset="(assetId) => (screen = { kind: 'ark-asset', assetId })"
+            @create-asset="screen = { kind: 'create-asset' }"
             @see-all-activity="section = 'activity'"
           />
         </KeepAlive>
@@ -131,6 +134,12 @@ async function lock() {
             @back="goHome"
             @send="openSend(`ark:${screen.assetId}`)"
           />
+
+          <div v-else-if="screen.kind === 'create-asset'" class="screen">
+            <button type="button" class="back" @click="goHome"><Icon name="arrow-left" :size="14" /> Back</button>
+            <h2>Create asset</h2>
+            <AssetCreate />
+          </div>
         </template>
 
         <div v-else-if="section === 'activity'" class="screen">

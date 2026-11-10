@@ -77,6 +77,7 @@ const emit = defineEmits<{
   'open-asset': [assetId: string];
   send: [];
   receive: [];
+  'create-asset': [];
   'see-all-activity': [];
 }>();
 
@@ -296,8 +297,12 @@ onActivated(() => {
         </div>
       </div>
 
-      <div v-if="assets.length > 0" class="assets-summary">
-        <p class="section-title">Ark Assets</p>
+      <div class="assets-summary">
+        <div class="assets-heading">
+          <p class="section-title">Ark Assets</p>
+          <button type="button" class="setup-link" @click="emit('create-asset')">Create asset</button>
+        </div>
+        <p v-if="assets.length === 0" class="empty-assets">No assets held</p>
         <button type="button" class="asset-row clickable" v-for="asset in assets" :key="asset.assetId" @click="emit('open-asset', asset.assetId)">
           <span>{{ asset.metadata?.name ?? tickerOrShortId(asset) }}</span>
           <span class="asset-amount">{{ formatAssetAmount(asset) }} {{ tickerOrShortId(asset) }} <Icon name="chevron-right" :size="12" /></span>
@@ -462,6 +467,8 @@ onActivated(() => {
   gap: 8px;
   margin-top: 8px;
 }
+.assets-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.empty-assets { color: var(--color-text-muted); font-size: 12px; }
 .section-title { font-size: 11px; color: var(--color-accent); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
 .asset-row { display: flex; justify-content: space-between; font-size: 13px; color: #aaa; }
 .asset-row.clickable { background: none; border: none; cursor: pointer; padding: 0; text-align: left; width: 100%; }

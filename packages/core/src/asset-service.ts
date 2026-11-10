@@ -24,6 +24,8 @@ export interface AssetInfo {
   displayAmount: number;
   genesisTxid: string;
   metadata?: { name?: string; ticker?: string; decimals?: number; icon?: string };
+  /** Present when future supply can be issued by holders of this control asset. */
+  controlAssetId?: string;
 }
 
 export class AssetService {
@@ -49,7 +51,16 @@ export class AssetService {
     const { assets } = await wallet.getBalance();
     return Promise.all(
       assets.map(async (asset) => {
-        const metadata = await this.getAssetMetadata(wallet, asset.assetId);
+        let metadata: AssetInfo['metadata'];
+        let controlAssetId: string | undefined;
+        try {
+          const details = await wallet.assetManager.getAssetDetails(asset.assetId);
+          controlAssetId = details.controlAssetId;
+          metadata = details.metadata ? {
+            name: details.metadata.name, ticker: details.metadata.ticker, decimals: details.metadata.decimals,
+            icon: sanitizeIconUrl(details.metadata.icon),
+          } : undefined;
+        } catch { metadata = undefined; }
         const decimals = metadata?.decimals ?? 0;
         const amount = Number(asset.amount);
         return {
@@ -58,6 +69,7 @@ export class AssetService {
           displayAmount: amount / 10 ** decimals,
           genesisTxid: genesisTxidFromAssetId(asset.assetId),
           metadata,
+          ...(controlAssetId ? { controlAssetId } : {}),
         };
       }),
     );

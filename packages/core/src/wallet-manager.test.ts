@@ -239,6 +239,69 @@ describe('WalletManager.sendAsset', () => {
   });
 });
 
+describe('WalletManager.issueAsset', () => {
+  test('validates safe integer amounts and control asset ids before issuing', async () => {
+    const manager = new WalletManager(inMemoryStore());
+    let called = false;
+    withWallet(manager, { assetManager: { issue: async () => ((called = true), { arkTxId: 'tx', assetId: 'id' }) } as never });
+    await expect(manager.issueAsset({ amount: Number.MAX_SAFE_INTEGER + 1 })).rejects.toThrow(/safe integer/);
+    await expect(manager.issueAsset({ amount: 1, controlAssetId: 'bad' })).rejects.toThrow(/controlAssetId/);
+    expect(called).toBe(false);
+  });
+
+  test('converts the approved amount to bigint and returns the issuance result', async () => {
+    const manager = new WalletManager(inMemoryStore());
+    let received: unknown;
+    withWallet(manager, { assetManager: { issue: async (params: unknown) => {
+      received = params;
+      return { arkTxId: 'a'.repeat(64), assetId: `${'b'.repeat(64)}0000` };
+    } } as never });
+    const result = await manager.issueAsset({ amount: 250, metadata: { name: 'Token', ticker: 'TKN', decimals: 2 } });
+    expect(received).toEqual({ amount: 250n, metadata: { name: 'Token', ticker: 'TKN', decimals: 2 } });
+    expect(result.assetId).toBe(`${'b'.repeat(64)}0000`);
+  });
+});
+
+describe('WalletManager.reissueAsset', () => {
+  test('validates the asset id and amount before reissuing', async () => {
+    const manager = new WalletManager(inMemoryStore());
+    let called = false;
+    withWallet(manager, { assetManager: { reissue: async () => ((called = true), 'tx') } as never });
+    await expect(manager.reissueAsset({ assetId: 'bad', amount: 1 })).rejects.toThrow(/assetId/);
+    await expect(manager.reissueAsset({ assetId: 'a'.repeat(68), amount: 0 })).rejects.toThrow(/positive safe integer/);
+    expect(called).toBe(false);
+  });
+
+  test('converts the amount to bigint and returns the reissuance txid', async () => {
+    const manager = new WalletManager(inMemoryStore());
+    let received: unknown;
+    withWallet(manager, { assetManager: { reissue: async (params: unknown) => ((received = params), 'reissue-tx') } as never });
+    const assetId = 'a'.repeat(68);
+    await expect(manager.reissueAsset({ assetId, amount: 250 })).resolves.toBe('reissue-tx');
+    expect(received).toEqual({ assetId, amount: 250n });
+  });
+});
+
+describe('WalletManager.burnAsset', () => {
+  test('validates the asset id and amount before burning', async () => {
+    const manager = new WalletManager(inMemoryStore());
+    let called = false;
+    withWallet(manager, { assetManager: { burn: async () => ((called = true), 'tx') } as never });
+    await expect(manager.burnAsset({ assetId: 'bad', amount: 1 })).rejects.toThrow(/assetId/);
+    await expect(manager.burnAsset({ assetId: 'a'.repeat(68), amount: Number.MAX_SAFE_INTEGER + 1 })).rejects.toThrow(/safe integer/);
+    expect(called).toBe(false);
+  });
+
+  test('burns without requiring a control asset id', async () => {
+    const manager = new WalletManager(inMemoryStore());
+    let received: unknown;
+    withWallet(manager, { assetManager: { burn: async (params: unknown) => ((received = params), 'burn-tx') } as never });
+    const assetId = 'b'.repeat(68);
+    await expect(manager.burnAsset({ assetId, amount: 100 })).resolves.toBe('burn-tx');
+    expect(received).toEqual({ assetId, amount: 100n });
+  });
+});
+
 describe('WalletManager.settle', () => {
   test('returns the txid on success', async () => {
     const manager = new WalletManager(inMemoryStore());

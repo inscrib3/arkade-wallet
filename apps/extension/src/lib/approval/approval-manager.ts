@@ -6,6 +6,9 @@ export type ApprovalType =
   | 'connect'
   | 'sendToAddress'
   | 'sendAsset'
+  | 'issueAsset'
+  | 'reissueAsset'
+  | 'burnAsset'
   | 'settle'
   | 'signMessage';
 
@@ -16,6 +19,8 @@ export interface ApprovalRequest {
   amount?: number;
   assets?: Array<{ assetId: string; amount: number }>;
   message?: string;
+  issuance?: { amount: number; controlAssetId?: string; metadata?: { name?: string; ticker?: string; decimals?: number; icon?: string } };
+  assetOperation?: { assetId: string; amount: number };
   // Which wallet would act, so mainnet and testnet requests look different.
   network?: string;
   account?: string;
@@ -64,6 +69,8 @@ export async function requestApproval(approvalId: string, req: ApprovalRequest):
   if (req.amount !== undefined) params.set('amount', String(req.amount));
   if (req.assets) params.set('assets', JSON.stringify(req.assets));
   if (req.message !== undefined) params.set('message', req.message);
+  if (req.issuance) params.set('issuance', JSON.stringify(req.issuance));
+  if (req.assetOperation) params.set('assetOperation', JSON.stringify(req.assetOperation));
   if (req.network) params.set('network', req.network);
   if (req.account) params.set('account', req.account);
 

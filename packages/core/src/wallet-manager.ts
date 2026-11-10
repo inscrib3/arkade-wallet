@@ -556,6 +556,49 @@ export class WalletManager {
     return this.ownTx(txid);
   }
 
+  async issueAsset(input: {
+    amount: number;
+    controlAssetId?: string;
+    metadata?: { name?: string; ticker?: string; decimals?: number; icon?: string };
+  }): Promise<{ arkTxId: string; assetId: string }> {
+    assertValidAmount(input.amount, 'asset amount');
+    if (input.controlAssetId && !/^[0-9a-f]{68}$/i.test(input.controlAssetId)) throw new Error('Invalid controlAssetId: must be a 34-byte Arkade asset id');
+    const metadata = input.metadata;
+    if (metadata?.ticker !== undefined && (!/^[A-Za-z0-9._-]{1,16}$/.test(metadata.ticker))) throw new Error('ticker must be 1-16 letters, numbers, dots, underscores, or dashes');
+    if (metadata?.name !== undefined && (metadata.name.length < 1 || metadata.name.length > 64)) throw new Error('name must be 1-64 characters');
+    if (metadata?.decimals !== undefined && (!Number.isInteger(metadata.decimals) || metadata.decimals < 0 || metadata.decimals > 18)) throw new Error('decimals must be 0-18');
+    if (metadata?.icon !== undefined) {
+      const url = new URL(metadata.icon);
+      if (url.protocol !== 'https:' && url.protocol !== 'http:') throw new Error('icon must be an http(s) URL');
+    }
+    const result = await this.getWalletOrThrow().assetManager.issue({
+      amount: BigInt(input.amount),
+      ...(input.controlAssetId ? { controlAssetId: input.controlAssetId } : {}),
+      ...(metadata ? { metadata } : {}),
+    });
+    this.ownTx(result.arkTxId);
+    return result;
+  }
+
+  async reissueAsset(input: { assetId: string; amount: number }): Promise<string> {
+    this._assertValidAssetOperation(input);
+    const txid = await this.getWalletOrThrow().assetManager.reissue({
+      assetId: input.assetId,
+      amount: BigInt(input.amount),
+    });
+    return this.ownTx(txid);
+  }
+
+  async burnAsset(input: { assetId: string; amount: number }): Promise<string> {
+    this._assertValidAssetOperation(input);
+    await this._assertAssetNotReserved(input.assetId, String(input.amount));
+    const txid = await this.getWalletOrThrow().assetManager.burn({
+      assetId: input.assetId,
+      amount: BigInt(input.amount),
+    });
+    return this.ownTx(txid);
+  }
+
   // Settle and offboard include every VTXO as an input, so one VTXO near expiry
   // can get the whole request rejected (minExpiryGap). The prefix lets the UI
   // explain that.
@@ -844,6 +887,11 @@ export class WalletManager {
     throw new Error(
       `${reserved.amount} units of this asset are held by a settlement that hasn't finished, so only ${spendable} can be spent now. The wallet frees a stalled settlement after 15 minutes - try again after ${new Date(reserved.releasableAt).toLocaleTimeString()}.`,
     );
+  }
+
+  private _assertValidAssetOperation(input: { assetId: string; amount: number }): void {
+    if (!/^[0-9a-f]{68}$/i.test(input.assetId)) throw new Error('Invalid assetId: must be a 34-byte Arkade asset id');
+    assertValidAmount(input.amount, 'asset amount');
   }
 
   // --- Accounts ---

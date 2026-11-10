@@ -9,7 +9,7 @@ A non-custodial Bitcoin wallet for the [Ark protocol]([https://arkadeos.com/), s
 - Fully non-custodial — your keys never leave your device.
 - Send and receive over the Ark protocol (fast, low-fee, no full on-chain confirmation needed) and over Lightning via atomic swaps.
 - On-chain in and out: receive to a boarding address and move it into Ark, or send to any Bitcoin address through a collaborative exit with the Ark server.
-- Ark assets: view and send the assets your wallet holds.
+- Ark assets: create, view, send, reissue (with a held control asset), and burn assets.
 - Multiple accounts and imported seeds under one password, coin control, auto-lock.
 - Same wallet, two shells: a browser extension for app integration, and an installable PWA that needs no install step.
 - Unilateral exit — you can always recover funds on-chain yourself, without the Ark server's cooperation. It is an emergency path: every off-chain step behind your coins has to be published on-chain, so fees can exceed a small balance. Settling first (one fresh VTXO) keeps it cheapest.

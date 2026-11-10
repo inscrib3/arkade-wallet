@@ -134,6 +134,12 @@ export class BackgroundRouter {
         };
         return this.manager.sendAsset(address, assets, bitcoinAmount);
       }
+      case 'arkade_issueAsset':
+        return this.manager.issueAsset(params as Parameters<WalletManager['issueAsset']>[0]);
+      case 'arkade_reissueAsset':
+        return this.manager.reissueAsset(params as Parameters<WalletManager['reissueAsset']>[0]);
+      case 'arkade_burnAsset':
+        return this.manager.burnAsset(params as Parameters<WalletManager['burnAsset']>[0]);
       case 'arkade_settle':
         return this.manager.settle();
       case 'arkade_signMessage': {
@@ -334,6 +340,21 @@ export class BackgroundRouter {
         };
         const txid = await this.manager.sendAsset(address, assets, bitcoinAmount, selectedVtxos);
         return ok(id, txid);
+      }
+
+      case 'wallet_issueAsset': {
+        const input = params as Parameters<WalletManager['issueAsset']>[0];
+        return ok(id, await this.manager.issueAsset(input));
+      }
+
+      case 'wallet_reissueAsset': {
+        const input = params as Parameters<WalletManager['reissueAsset']>[0];
+        return ok(id, await this.manager.reissueAsset(input));
+      }
+
+      case 'wallet_burnAsset': {
+        const input = params as Parameters<WalletManager['burnAsset']>[0];
+        return ok(id, await this.manager.burnAsset(input));
       }
 
       case 'wallet_settle': {
@@ -584,6 +605,21 @@ export class BackgroundRouter {
           params,
           'User rejected the transaction',
         );
+      }
+
+      case 'arkade_issueAsset': {
+        const issuance = params as Parameters<WalletManager['issueAsset']>[0];
+        return this._approveThenPerform(id, { type: 'issueAsset', origin, issuance }, method, params, 'User rejected the asset issuance');
+      }
+
+      case 'arkade_reissueAsset': {
+        const assetOperation = params as Parameters<WalletManager['reissueAsset']>[0];
+        return this._approveThenPerform(id, { type: 'reissueAsset', origin, assetOperation }, method, params, 'User rejected the asset reissuance');
+      }
+
+      case 'arkade_burnAsset': {
+        const assetOperation = params as Parameters<WalletManager['burnAsset']>[0];
+        return this._approveThenPerform(id, { type: 'burnAsset', origin, assetOperation }, method, params, 'User rejected the asset burn');
       }
 
       case 'arkade_settle':

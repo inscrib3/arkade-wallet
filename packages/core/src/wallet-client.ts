@@ -23,6 +23,7 @@ export interface AssetEntry {
   displayAmount: number;
   genesisTxid: string;
   metadata?: { name?: string; ticker?: string; decimals?: number; icon?: string };
+  controlAssetId?: string;
 }
 
 // 'accountChanged' has no payload, so unlike the app-facing 'accountsChanged'
@@ -67,6 +68,13 @@ export interface WalletClient {
     bitcoinAmount?: number,
     selectedVtxos?: VtxoOutpoint[],
   ): Promise<string>;
+  issueAsset(input: {
+    amount: number;
+    controlAssetId?: string;
+    metadata?: { name?: string; ticker?: string; decimals?: number; icon?: string };
+  }): Promise<{ arkTxId: string; assetId: string }>;
+  reissueAsset(input: { assetId: string; amount: number }): Promise<string>;
+  burnAsset(input: { assetId: string; amount: number }): Promise<string>;
   settle(): Promise<string>;
   // Lets the popup show progress for, or detect, a settle already running.
   isSettling(): Promise<boolean>;

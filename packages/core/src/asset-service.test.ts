@@ -6,7 +6,7 @@ import { AssetService } from './asset-service.js';
 // the full SDK interface, which carries a lot more this service ignores.
 function mockWallet(overrides: {
   assets?: Array<{ assetId: string; amount: bigint }>;
-  assetDetails?: (assetId: string) => Promise<{ metadata?: { name?: string; ticker?: string; decimals?: number; icon?: string } }>;
+  assetDetails?: (assetId: string) => Promise<{ metadata?: { name?: string; ticker?: string; decimals?: number; icon?: string }; controlAssetId?: string }>;
   txs?: Array<Record<string, unknown>>;
 }) {
   return {
@@ -47,6 +47,14 @@ describe('AssetService.getAssets', () => {
     const [asset] = await service.getAssets(wallet);
     expect(asset.displayAmount).toBe(150);
     expect(asset.metadata).toBeUndefined();
+  });
+
+  test('exposes the control asset id when supply is reissuable', async () => {
+    const service = new AssetService();
+    const controlAssetId = `${'c'.repeat(64)}0000`;
+    const wallet = mockWallet({ assets: [{ assetId: 'a1', amount: 150n }], assetDetails: async () => ({ controlAssetId }) });
+    const [asset] = await service.getAssets(wallet);
+    expect(asset.controlAssetId).toBe(controlAssetId);
   });
 
   test('falls back to no metadata when the details fetch throws', async () => {

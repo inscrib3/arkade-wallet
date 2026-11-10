@@ -58,6 +58,9 @@ The connection is to the wallet, not to one account: after the user switches acc
 | `getTransactionHistory()` | `TxHistoryEntry[]` (below) | No |
 | `sendToAddress(address, amount)` | txid | Every call |
 | `sendAsset(address, assets, bitcoinAmount?)` | txid | Every call |
+| `issueAsset({ amount, controlAssetId?, metadata? })` | `{ arkTxId, assetId }` | Every call |
+| `reissueAsset({ assetId, amount })` | txid | Every call |
+| `burnAsset({ assetId, amount })` | txid | Every call |
 | `settle()` | txid of the batch the VTXOs were renewed in | Every call |
 | `signMessage(message)` | `{ message, signature, address }` (BIP-322) | Every call |
 
@@ -70,6 +73,26 @@ await window.arkade.sendAsset('ark1q…', [{ assetId: '…', amount: 500 }]);
 ```
 
 `amount` is in the asset's raw units, without its decimals applied (`getAssets()` returns `metadata.decimals`). `bitcoinAmount` optionally sends sats in the same transaction.
+
+#### `issueAsset`
+
+```js
+const issued = await window.arkade.issueAsset({
+  amount: 1_000_000,
+  metadata: { name: 'Example Token', ticker: 'EXAMPLE', decimals: 2 },
+});
+```
+
+Issuance is signed by the active wallet only after a dedicated approval. `amount` is a positive safe integer in raw units. An optional 34-byte `controlAssetId` associates an existing control asset for future issuance; metadata accepts `name`, `ticker`, `decimals` (0–18), and an HTTP(S) `icon` URL.
+
+#### `reissueAsset` and `burnAsset`
+
+```js
+const reissuanceTxid = await window.arkade.reissueAsset({ assetId, amount: 500 });
+const burnTxid = await window.arkade.burnAsset({ assetId, amount: 200 });
+```
+
+Reissuance creates additional supply and succeeds only when the asset has a control asset that the active wallet owns. Burning permanently destroys units held by the active wallet and does **not** require a control asset. Both amounts are positive safe integers in raw units, and every call has a dedicated approval.
 
 #### `signMessage`
 
@@ -106,6 +129,8 @@ interface AssetInfo {
   displayAmount: number; // amount with decimals applied
   genesisTxid: string;
   metadata?: { name?: string; ticker?: string; decimals?: number; icon?: string };
+  // Present when holders of this control asset can authorize additional supply.
+  controlAssetId?: string;
 }
 
 interface TxHistoryEntry {

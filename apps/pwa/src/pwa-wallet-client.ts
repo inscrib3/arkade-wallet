@@ -58,6 +58,9 @@ export function createPwaWalletClient(): WalletClient {
     sendOnchain: (address, amount) => manager.sendOnchain(address, amount),
     sendAsset: (address, assets, bitcoinAmount, selectedVtxos) =>
       manager.sendAsset(address, assets, bitcoinAmount, selectedVtxos),
+    issueAsset: (input) => manager.issueAsset(input),
+    reissueAsset: (input) => manager.reissueAsset(input),
+    burnAsset: (input) => manager.burnAsset(input),
     settle: () => manager.settle(),
     isSettling: async () => manager.isSettling(),
     getSettleProgress: () => manager.getSettleProgress(),

@@ -7,6 +7,9 @@ type RequestType =
   | 'connect'
   | 'sendToAddress'
   | 'sendAsset'
+  | 'issueAsset'
+  | 'reissueAsset'
+  | 'burnAsset'
   | 'settle'
   | 'signMessage'
   | 'unknown';
@@ -24,6 +27,8 @@ const assets = ref<AssetLine[]>([]);
 const message = ref('');
 const network = ref('');
 const account = ref('');
+const issuance = ref<{ amount: number; controlAssetId?: string; metadata?: { name?: string; ticker?: string; decimals?: number; icon?: string } } | null>(null);
+const assetOperation = ref<{ assetId: string; amount: number } | null>(null);
 const loading = ref(false);
 const error = ref('');
 // Approve stays disabled briefly after the window opens, so a click meant for
@@ -55,6 +60,14 @@ onMounted(() => {
     } catch {
       assets.value = [];
     }
+  }
+  const issuanceParam = params.get('issuance');
+  if (issuanceParam) {
+    try { issuance.value = JSON.parse(issuanceParam); } catch { issuance.value = null; }
+  }
+  const assetOperationParam = params.get('assetOperation');
+  if (assetOperationParam) {
+    try { assetOperation.value = JSON.parse(assetOperationParam); } catch { assetOperation.value = null; }
   }
 });
 
@@ -122,6 +135,27 @@ async function respond(approved: boolean) {
         This will broadcast a real transaction from your wallet. Make sure
         you trust this site before approving.
       </p>
+    </template>
+
+    <template v-else-if="requestType === 'issueAsset'">
+      <h1>Create asset?</h1>
+      <div class="tx-details">
+        <div class="row"><span class="label">Name / ticker</span><span class="value">{{ issuance?.metadata?.name || 'Unnamed' }} · {{ issuance?.metadata?.ticker || '—' }}</span></div>
+        <div class="row"><span class="label">Raw supply</span><span class="value mono">{{ sats(issuance?.amount) }}</span></div>
+        <div class="row"><span class="label">Decimals</span><span class="value">{{ issuance?.metadata?.decimals ?? 0 }}</span></div>
+        <div class="row" v-if="issuance?.controlAssetId"><span class="label">Control asset</span><span class="value mono">{{ issuance.controlAssetId }}</span></div>
+      </div>
+      <p class="description">This creates a new Arkade asset and broadcasts a real transaction. Metadata and initial supply cannot be changed by this request.</p>
+    </template>
+
+    <template v-else-if="requestType === 'reissueAsset' || requestType === 'burnAsset'">
+      <h1>{{ requestType === 'reissueAsset' ? 'Reissue asset?' : 'Burn asset?' }}</h1>
+      <div class="tx-details" :class="{ danger: requestType === 'burnAsset' }">
+        <div class="row"><span class="label">Asset</span><span class="value mono">{{ assetOperation?.assetId || '—' }}</span></div>
+        <div class="row"><span class="label">Raw amount</span><span class="value mono">{{ sats(assetOperation?.amount) }}</span></div>
+      </div>
+      <p v-if="requestType === 'reissueAsset'" class="description">This creates additional supply. It requires this wallet to own the asset's control asset and broadcasts a real transaction.</p>
+      <p v-else class="description warning">This permanently destroys the specified amount and broadcasts a real transaction. Burned units cannot be recovered.</p>
     </template>
 
     <template v-else-if="requestType === 'settle'">

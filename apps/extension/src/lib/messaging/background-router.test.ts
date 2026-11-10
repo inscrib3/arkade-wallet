@@ -66,6 +66,8 @@ const manager = {
     return 'txid';
   },
   signMessage: async (message: string) => (calls.push('signMessage'), { message, signature: 'sig', address: 'bc1p' }),
+  reissueAsset: async () => (calls.push('reissueAsset'), 'reissue-tx'),
+  burnAsset: async () => (calls.push('burnAsset'), 'burn-tx'),
   getActiveAccount: async () => activeAccount,
   listAccounts: async () => [{ seedId: 0, index: 0, label: 'Main' }],
   lock: async () => void calls.push('lock'),
@@ -197,6 +199,25 @@ describe('BackgroundRouter approvals', () => {
     await send('approval_respond', { approvalId: url.searchParams.get('id'), approved: false }, internal);
     expect((await pending).error).toMatch(/rejected/);
     expect(calls).toEqual([]);
+  });
+
+  test('reissuance and burn each require approval', async () => {
+    connect(DAPP);
+    const assetOperation = { assetId: 'a'.repeat(68), amount: 100 };
+
+    const pendingReissue = send('arkade_reissueAsset', assetOperation, page);
+    const reissueUrl = await waitForWindow(1);
+    expect(reissueUrl.searchParams.get('type')).toBe('reissueAsset');
+    expect(JSON.parse(reissueUrl.searchParams.get('assetOperation')!)).toEqual(assetOperation);
+    await send('approval_respond', { approvalId: reissueUrl.searchParams.get('id'), approved: true }, internal);
+    expect((await pendingReissue).result).toBe('reissue-tx');
+
+    const pendingBurn = send('arkade_burnAsset', assetOperation, page);
+    const burnUrl = await waitForWindow(2);
+    expect(burnUrl.searchParams.get('type')).toBe('burnAsset');
+    await send('approval_respond', { approvalId: burnUrl.searchParams.get('id'), approved: true }, internal);
+    expect((await pendingBurn).result).toBe('burn-tx');
+    expect(calls).toEqual(['reissueAsset', 'burnAsset']);
   });
 
   // Regression: the popup named one account, the send ran on whichever was

@@ -84,6 +84,7 @@ export default defineUnlistedScript(() => {
     amount: number;
     displayAmount: number;
     metadata?: { name?: string; ticker?: string; decimals?: number; icon?: string };
+    controlAssetId?: string;
   }
 
   interface TxHistoryEntry {
@@ -145,6 +146,15 @@ export default defineUnlistedScript(() => {
       bitcoinAmount?: number,
     ): Promise<string> {
       return request('arkade_sendAsset', { address, assets, bitcoinAmount });
+    },
+    issueAsset(input: { amount: number; controlAssetId?: string; metadata?: { name?: string; ticker?: string; decimals?: number; icon?: string } }): Promise<{ arkTxId: string; assetId: string }> {
+      return request('arkade_issueAsset', input);
+    },
+    reissueAsset(input: { assetId: string; amount: number }): Promise<string> {
+      return request('arkade_reissueAsset', input);
+    },
+    burnAsset(input: { assetId: string; amount: number }): Promise<string> {
+      return request('arkade_burnAsset', input);
     },
     settle(): Promise<string> {
       return request('arkade_settle');

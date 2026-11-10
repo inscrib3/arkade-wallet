@@ -15,8 +15,8 @@ export function assertValidMnemonic(mnemonic: string): void {
 
 // Last check before funds move; the approval popup doesn't block bad amounts.
 export function assertValidAmount(amount: number, label = 'amount'): void {
-  if (!Number.isFinite(amount) || !Number.isInteger(amount) || amount <= 0) {
-    throw new Error(`Invalid ${label}: must be a positive integer`);
+  if (!Number.isSafeInteger(amount) || amount <= 0) {
+    throw new Error(`Invalid ${label}: must be a positive safe integer`);
   }
 }
 
