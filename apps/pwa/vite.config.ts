@@ -42,7 +42,7 @@ export default defineConfig({
       manifest: {
         name: 'Inscrib3 Wallet',
         short_name: 'Inscrib3',
-        description: 'Your gateway to programmable Bitcoin.',
+        description: 'A self-custodial, open-source wallet for programmable Bitcoin and Arkade assets.',
         theme_color: '#000000',
         background_color: '#000000',
         display: 'standalone',
