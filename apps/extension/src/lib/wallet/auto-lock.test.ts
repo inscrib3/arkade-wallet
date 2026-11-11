@@ -8,14 +8,7 @@ let alarmChecks: number;
 const realSetInterval = globalThis.setInterval;
 const realClearInterval = globalThis.clearInterval;
 
-beforeEach(() => {
-  ticks = [];
-  alarmPending = false;
-  alarmChecks = 0;
-  (globalThis as unknown as { setInterval: unknown }).setInterval = (fn: () => Promise<void>) => ticks.push(fn);
-  (globalThis as unknown as { clearInterval: unknown }).clearInterval = (handle: number) => {
-    ticks[handle - 1] = async () => {};
-  };
+function installBrowserMock(): void {
   (globalThis as unknown as { browser: unknown }).browser = {
     alarms: {
       create: (name: string) => {
@@ -31,6 +24,17 @@ beforeEach(() => {
       },
     },
   };
+}
+
+beforeEach(() => {
+  ticks = [];
+  alarmPending = false;
+  alarmChecks = 0;
+  (globalThis as unknown as { setInterval: unknown }).setInterval = (fn: () => Promise<void>) => ticks.push(fn);
+  (globalThis as unknown as { clearInterval: unknown }).clearInterval = (handle: number) => {
+    ticks[handle - 1] = async () => {};
+  };
+  installBrowserMock();
 });
 
 afterEach(() => {
@@ -40,27 +44,35 @@ afterEach(() => {
 });
 
 async function tick(): Promise<void> {
-  for (const run of ticks) await run();
+  for (const run of ticks) {
+    installBrowserMock();
+    await run();
+  }
+}
+
+function schedule(): void {
+  installBrowserMock();
+  scheduleAutoLock();
 }
 
 describe('extension auto-lock keepalive', () => {
   // Regression: Chrome stopped the idle worker about a minute after unlock,
   // wiping the in-memory wallet long before the auto-lock alarm.
   test('keeps calling the extension API while the auto-lock alarm is pending', async () => {
-    scheduleAutoLock();
+    schedule();
     await tick();
     await tick();
     expect(alarmChecks).toBe(2);
   });
 
   test('activity reschedules the alarm without starting a second keepalive', () => {
-    scheduleAutoLock();
-    scheduleAutoLock();
+    schedule();
+    schedule();
     expect(ticks.length).toBe(1);
   });
 
   test('stops once the alarm has fired, so a locked worker can be stopped', async () => {
-    scheduleAutoLock();
+    schedule();
     alarmPending = false;
     await tick();
     await tick();
@@ -68,7 +80,7 @@ describe('extension auto-lock keepalive', () => {
   });
 
   test('stops when the wallet is locked by hand', async () => {
-    scheduleAutoLock();
+    schedule();
     cancelAutoLock();
     await tick();
     expect(alarmChecks).toBe(0);
