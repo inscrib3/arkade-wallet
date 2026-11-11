@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#08040e"/><stop offset=".48" stop-color="#030706"/><stop offset="1" stop-color="#082117"/></linearGradient>
+    <linearGradient id="screen" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#151918"/><stop offset="1" stop-color="#090c0b"/></linearGradient>
+    <radialGradient id="aura"><stop stop-color="#a855f7" stop-opacity=".28"/><stop offset=".5" stop-color="#34d399" stop-opacity=".1"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient>
+    <pattern id="grid" width="38" height="38" patternUnits="userSpaceOnUse"><path d="M38 0H0V38" fill="none" stroke="#70ffaf" stroke-opacity=".06"/></pattern>
+    <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="28" stdDeviation="24" flood-color="#000" flood-opacity=".8"/><feDropShadow dx="0" dy="0" stdDeviation="10" flood-color="#70ffaf" flood-opacity=".16"/></filter>
+    <image id="butterfly" href="data:image/png;base64,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" width="210" height="250"/>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect width="1200" height="630" fill="url(#grid)"/>
+  <ellipse cx="825" cy="305" rx="450" ry="360" fill="url(#aura)"/>
+  <g transform="translate(66 58)">
+    <text fill="#70ffaf" font-family="Courier New, monospace" font-size="16" letter-spacing="4">INSCRIB3 / WALLET</text>
+    <path d="M0 32H500" stroke="#70ffaf" stroke-opacity=".25"/>
+  </g>
+  <text x="66" y="205" fill="#f6fff9" font-family="Arial, Helvetica, sans-serif" font-size="65" font-weight="700" letter-spacing="-3">Your gateway to</text>
+  <text x="66" y="283" fill="#70ffaf" font-family="Arial, Helvetica, sans-serif" font-size="65" font-weight="700" letter-spacing="-3">programmable</text>
+  <text x="66" y="361" fill="#70ffaf" font-family="Arial, Helvetica, sans-serif" font-size="65" font-weight="700" letter-spacing="-3">Bitcoin.</text>
+  <text x="70" y="420" fill="#a7b7ae" font-family="Arial, Helvetica, sans-serif" font-size="20">Self-custodial · Open source · Built with Arkade</text>
+  <g transform="translate(68 492)">
+    <circle cx="8" cy="8" r="8" fill="#70ffaf"/>
+    <text x="31" y="15" fill="#d9e8df" font-family="Courier New, monospace" font-size="17" letter-spacing="2">WALLET.INSCRIB3.COM</text>
+  </g>
+  <!-- Wallet interface card -->
+  <g transform="translate(786 55) rotate(3 165 260)" filter="url(#shadow)">
+    <rect width="330" height="520" rx="35" fill="#020303" stroke="#4b5a52" stroke-width="2"/>
+    <rect x="14" y="14" width="302" height="492" rx="25" fill="url(#screen)" stroke="#26342d"/>
+    <rect x="128" y="27" width="74" height="6" rx="3" fill="#39453f"/>
+    <text x="38" y="75" fill="#8c9c93" font-family="Courier New, monospace" font-size="12" letter-spacing="2">TOTAL BALANCE</text>
+    <text x="38" y="122" fill="#f5fff9" font-family="Arial, Helvetica, sans-serif" font-size="38" font-weight="700">0.015 BTC</text>
+    <text x="38" y="148" fill="#70ffaf" font-family="Arial, Helvetica, sans-serif" font-size="14">≈ 1,500,000 sats</text>
+    <g transform="translate(38 181)">
+      <rect width="112" height="42" rx="21" fill="#70ffaf"/><text x="31" y="27" fill="#041109" font-family="Arial" font-size="13" font-weight="700">SEND</text>
+      <rect x="126" width="112" height="42" rx="21" fill="#1a221e" stroke="#405148"/><text x="150" y="27" fill="#d8e7df" font-family="Arial" font-size="13" font-weight="700">RECEIVE</text>
+    </g>
+    <text x="38" y="274" fill="#8c9c93" font-family="Courier New, monospace" font-size="12" letter-spacing="2">ASSETS</text>
+    <g transform="translate(38 294)">
+      <rect width="254" height="64" rx="12" fill="#121715" stroke="#28352f"/>
+      <circle cx="31" cy="32" r="16" fill="#172a20"/><text x="25" y="38" fill="#70ffaf" font-family="Arial" font-size="17" font-weight="700">₿</text>
+      <text x="58" y="28" fill="#eff8f3" font-family="Arial" font-size="14" font-weight="700">Bitcoin</text><text x="58" y="47" fill="#829087" font-family="Arial" font-size="11">ARKADE</text>
+      <text x="232" y="37" text-anchor="end" fill="#eff8f3" font-family="Arial" font-size="13">1.5M sats</text>
+    </g>
+    <g transform="translate(38 370)">
+      <rect width="254" height="64" rx="12" fill="#121715" stroke="#28352f"/>
+      <circle cx="31" cy="32" r="16" fill="#261534"/><circle cx="31" cy="32" r="7" fill="#b56cff"/>
+      <text x="58" y="28" fill="#eff8f3" font-family="Arial" font-size="14" font-weight="700">Ark assets</text><text x="58" y="47" fill="#829087" font-family="Arial" font-size="11">ISSUE · SEND · BURN</text>
+      <text x="232" y="37" text-anchor="end" fill="#70ffaf" font-family="Arial" font-size="13">OPEN →</text>
+    </g>
+    <rect x="122" y="480" width="86" height="5" rx="3" fill="#526158"/>
+  </g>
+  <!-- 3D butterfly emerging from the wallet -->
+  <g transform="translate(651 192) rotate(-12 105 125)" filter="url(#shadow)">
+    <use href="#butterfly" x="18" y="15" opacity=".18"/>
+    <use href="#butterfly" x="14" y="12" opacity=".28"/>
+    <use href="#butterfly" x="10" y="8" opacity=".42"/>
+    <use href="#butterfly" x="6" y="5" opacity=".62"/>
+    <use href="#butterfly"/>
+  </g>
+  <path d="M735 176c-34-32-70-37-107-14M718 447c-48 34-87 36-126 13" fill="none" stroke="#70ffaf" stroke-opacity=".3"/>
+  <circle cx="628" cy="162" r="4" fill="#b56cff"/><circle cx="592" cy="460" r="4" fill="#70ffaf"/>
+</svg>
