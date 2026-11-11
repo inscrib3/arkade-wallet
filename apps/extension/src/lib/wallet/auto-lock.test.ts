@@ -1,58 +1,46 @@
-import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { AUTO_LOCK_ALARM_NAME, scheduleAutoLock, cancelAutoLock } from './auto-lock.js';
+import { beforeEach, describe, expect, test } from 'bun:test';
+import { AUTO_LOCK_ALARM_NAME, createAutoLockController } from './auto-lock.js';
 
 // Intervals are captured instead of run, so each test fires ticks by hand.
 let ticks: Array<() => Promise<void>>;
 let alarmPending: boolean;
 let alarmChecks: number;
-const realSetInterval = globalThis.setInterval;
-const realClearInterval = globalThis.clearInterval;
-
-function installBrowserMock(): void {
-  (globalThis as unknown as { browser: unknown }).browser = {
-    alarms: {
-      create: (name: string) => {
-        if (name === AUTO_LOCK_ALARM_NAME) alarmPending = true;
-      },
-      clear: async () => {
-        alarmPending = false;
-        return true;
-      },
-      get: async () => {
-        alarmChecks++;
-        return alarmPending ? { name: AUTO_LOCK_ALARM_NAME } : undefined;
-      },
-    },
-  };
-}
+let autoLock: ReturnType<typeof createAutoLockController>;
 
 beforeEach(() => {
   ticks = [];
   alarmPending = false;
   alarmChecks = 0;
-  (globalThis as unknown as { setInterval: unknown }).setInterval = (fn: () => Promise<void>) => ticks.push(fn);
-  (globalThis as unknown as { clearInterval: unknown }).clearInterval = (handle: number) => {
-    ticks[handle - 1] = async () => {};
-  };
-  installBrowserMock();
-});
-
-afterEach(() => {
-  cancelAutoLock();
-  globalThis.setInterval = realSetInterval;
-  globalThis.clearInterval = realClearInterval;
+  autoLock = createAutoLockController({
+    createAlarm: (name) => {
+      if (name === AUTO_LOCK_ALARM_NAME) alarmPending = true;
+    },
+    clearAlarm: () => {
+      alarmPending = false;
+    },
+    getAlarm: async () => {
+      alarmChecks++;
+      return alarmPending ? { name: AUTO_LOCK_ALARM_NAME } : undefined;
+    },
+    setInterval: (callback) => {
+      ticks.push(async () => callback());
+      return ticks.length as unknown as ReturnType<typeof globalThis.setInterval>;
+    },
+    clearInterval: (handle) => {
+      ticks[Number(handle) - 1] = async () => {};
+    },
+  });
 });
 
 async function tick(): Promise<void> {
   for (const run of ticks) {
-    installBrowserMock();
     await run();
   }
+  await Promise.resolve();
 }
 
 function schedule(): void {
-  installBrowserMock();
-  scheduleAutoLock();
+  autoLock.schedule();
 }
 
 describe('extension auto-lock keepalive', () => {
@@ -81,7 +69,7 @@ describe('extension auto-lock keepalive', () => {
 
   test('stops when the wallet is locked by hand', async () => {
     schedule();
-    cancelAutoLock();
+    autoLock.cancel();
     await tick();
     expect(alarmChecks).toBe(0);
   });
