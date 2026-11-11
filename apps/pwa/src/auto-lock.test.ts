@@ -65,9 +65,9 @@ describe('PWA auto-lock', () => {
   test('locks on return when idle time before and while hidden adds up past the idle limit', async () => {
     const { client, state } = fakeClient();
     teardown = setupAutoLock(client);
-    setSystemTime(new Date('2026-10-23T12:04:30Z'));
+    setSystemTime(new Date('2026-10-23T12:59:30Z'));
     setHidden(true);
-    setSystemTime(new Date('2026-10-23T12:05:30Z'));
+    setSystemTime(new Date('2026-10-23T13:00:30Z'));
     setHidden(false);
     await flush();
     expect(state.locks).toBe(1);

@@ -2,7 +2,7 @@ import type { WalletClient } from '@inscrib3/core';
 
 // Locks after inactivity, and a while after being backgrounded (not instantly,
 // so a quick tab switch doesn't lock). A PWA has no background process.
-const IDLE_LOCK_MS = 5 * 60 * 1000;
+const IDLE_LOCK_MS = 60 * 60 * 1000;
 const BACKGROUND_LOCK_MS = 2 * 60 * 1000;
 const ACTIVITY_EVENTS = ['pointerdown', 'keydown', 'touchstart'] as const;
 
