@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import LoadingHint from './LoadingHint.vue';
 import { computed, onActivated, onDeactivated, onMounted, onUnmounted, ref } from 'vue';
 import { useWalletClient } from './wallet-client-key.js';
 import { useNetworkInfo, useAssets } from './composables/useWalletState.js';
@@ -96,8 +97,15 @@ async function refresh(opts: { silent?: boolean } = {}) {
 const POLL_INTERVAL_MS = 20_000;
 let pollHandle: ReturnType<typeof setInterval> | null = null;
 
-onMounted(() => {
-  refresh();
+// With last-seen history to show, the refresh runs quietly instead of
+// replacing the list with a loading line.
+onMounted(async () => {
+  const cachedHistory = (await client.getCachedOverview?.().catch(() => null))?.history;
+  if (cachedHistory) {
+    txs.value = cachedHistory;
+    loading.value = false;
+  }
+  refresh({ silent: !!cachedHistory });
   refreshNetwork();
   refreshAssets();
   startPolling();
@@ -135,7 +143,7 @@ onUnmounted(stopPolling);
   <div class="activity">
     <ToggleGroup v-if="!embedded" variant="pill" :options="FILTER_OPTIONS" v-model="filter" />
 
-    <p v-if="loading" class="hint">Loading activity…</p>
+    <LoadingHint v-if="loading" label="Loading activity…" />
     <p v-else-if="error" class="error">{{ error }}</p>
     <p v-else-if="filteredTxs.length === 0" class="hint">
       {{ filter === 'all' ? 'No activity yet' : 'Nothing here yet' }}

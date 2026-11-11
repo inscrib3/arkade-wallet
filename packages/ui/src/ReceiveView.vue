@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import LoadingHint from './LoadingHint.vue';
 import { computed, onMounted, ref } from 'vue';
 import { createUnifiedReceiveUri } from '@inscrib3/core';
 import { useWalletAddresses } from './composables/useWalletState.js';
@@ -31,7 +32,7 @@ onMounted(() => {
 
 <template>
   <div class="receive">
-    <p v-if="loading" class="hint">Loading…</p>
+    <LoadingHint v-if="loading" />
     <p v-else-if="error" class="error">{{ error }}</p>
     <template v-else>
       <ToggleGroup :options="RECEIVE_MODE_OPTIONS" v-model="arkadeMode" />

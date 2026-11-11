@@ -1,4 +1,4 @@
-import { loadNetworkSettings, saveNetworkSettings, describeNetwork, fetchConnectionInfo, type WalletManager, type NetworkSettings, type KeyValueStore, type VtxoOutpoint } from '@inscrib3/core';
+import { loadNetworkSettings, saveNetworkSettings, describeNetwork, fetchConnectionInfo, type WalletManager, type NetworkSettings, type KeyValueStore, type VtxoOutpoint, type CachedWalletOverview } from '@inscrib3/core';
 import { isInternalMethod, isInternalSender, isRpcMethod, type AnyRequest, type InternalResponse } from './protocol.js';
 import { connect, isConnected, getConnectedOrigins, revoke } from '../permissions/origin-permissions.js';
 import { nextApprovalId, requestApproval, resolveApproval, type ApprovalRequest } from '../approval/approval-manager.js';
@@ -6,6 +6,7 @@ import { savePendingRequest, loadPendingRequest, clearPendingRequest } from '../
 import { broadcastEvent, notifyUi } from './broadcast.js';
 import { encodeBigints, decodeBigints } from './bigint-wire.js';
 import { AUTO_LOCK_ALARM_NAME, scheduleAutoLock, cancelAutoLock } from '../wallet/auto-lock.js';
+import { OverviewCache } from '../wallet/overview-cache.js';
 import { checkForNewVersionIfDue, getVersionInfo, dismissVersionUpdate } from '../wallet/version-check.js';
 
 function ok(id: string, result: unknown): InternalResponse {
@@ -34,6 +35,8 @@ const OPEN_RPC_METHODS: ReadonlySet<string> = new Set([
 ]);
 
 export class BackgroundRouter {
+  private readonly overviewCache = new OverviewCache();
+
   constructor(private readonly manager: WalletManager, private readonly store: KeyValueStore) {
     this.manager.onIncomingFunds((funds) => {
       void notifyUi('fundsReceived', funds);
@@ -59,6 +62,7 @@ export class BackgroundRouter {
 
     browser.alarms.onAlarm.addListener((alarm) => {
       if (alarm.name === AUTO_LOCK_ALARM_NAME) {
+        this.overviewCache.clear();
         void this.manager.lock().then(() => broadcastEvent('lock'));
       }
     });
@@ -151,6 +155,16 @@ export class BackgroundRouter {
     }
   }
 
+  private async _fetchAndRemember<K extends keyof CachedWalletOverview>(
+    field: K,
+    fetchFresh: () => Promise<NonNullable<CachedWalletOverview[K]>>,
+  ): Promise<NonNullable<CachedWalletOverview[K]>> {
+    const walletKey = await this._activeWalletKey();
+    const value = await fetchFresh();
+    this.overviewCache.remember(walletKey, field, value);
+    return value;
+  }
+
   // Pages only get the new address scoped to their own origin; an origin-less
   // event would be relayed into every tab, connected or not.
   private async _broadcastAccountSwitch(): Promise<void> {
@@ -226,6 +240,7 @@ export class BackgroundRouter {
       }
 
       case 'wallet_lock':
+        this.overviewCache.clear();
         await this.manager.lock();
         cancelAutoLock();
         await broadcastEvent('lock');
@@ -233,7 +248,7 @@ export class BackgroundRouter {
 
       // --- Wallet reads ---
       case 'wallet_getAddress':
-        return ok(id, await this.manager.getAddress());
+        return ok(id, await this._fetchAndRemember('address', () => this.manager.getAddress()));
 
       case 'wallet_getBoardingAddress':
         return ok(id, await this.manager.getBoardingAddress());
@@ -242,13 +257,23 @@ export class BackgroundRouter {
         return ok(id, await this.manager.getExitFeeAddress());
 
       case 'wallet_getBalance':
-        return ok(id, await this.manager.getBalance());
+        return ok(id, await this._fetchAndRemember('balance', () => this.manager.getBalance()));
 
       case 'wallet_getVtxos':
-        return ok(id, await this.manager.getVtxos());
+        return ok(id, await this._fetchAndRemember('vtxos', () => this.manager.getVtxos()));
 
       case 'wallet_getTransactionHistory':
-        return ok(id, await this.manager.getTransactionHistory());
+        return ok(id, await this._fetchAndRemember('history', () => this.manager.getTransactionHistory()));
+
+      // This session's fetched data wins over the SDK's saved coins: it is newer.
+      case 'wallet_getCachedOverview': {
+        if (!this.manager.isUnlocked()) return ok(id, null);
+        const [stored, session] = await Promise.all([
+          this.manager.getStoredOverview(),
+          this._activeWalletKey().then((walletKey) => this.overviewCache.read(walletKey)),
+        ]);
+        return ok(id, { ...stored, ...session });
+      }
 
       case 'wallet_getAssetTransactionHistory': {
         const { assetId } = params as { assetId: string };
@@ -256,7 +281,7 @@ export class BackgroundRouter {
       }
 
       case 'wallet_getAssets':
-        return ok(id, await this.manager.getAssets());
+        return ok(id, await this._fetchAndRemember('assets', () => this.manager.getAssets()));
 
       case 'wallet_getAssetMetadata': {
         const { assetId } = params as { assetId: string };
@@ -427,6 +452,7 @@ export class BackgroundRouter {
           await this.manager.reconnect();
         } catch (e: unknown) {
           cancelAutoLock();
+          this.overviewCache.clear();
           await broadcastEvent('lock');
           await broadcastEvent('networkChanged', network);
           return err(id, `Saved, but the new server couldn't be reached - unlock to try again. ${String(e)}`);
@@ -485,6 +511,7 @@ export class BackgroundRouter {
         const { password } = params as { password: string };
         await this.manager.resetWallet(password);
         cancelAutoLock();
+        this.overviewCache.clear();
         await notifyUi('reset');
         return ok(id, true);
       }

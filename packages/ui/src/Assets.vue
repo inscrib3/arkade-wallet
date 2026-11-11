@@ -1,9 +1,11 @@
 <script setup lang="ts">
+import LoadingHint from './LoadingHint.vue';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useWalletClient } from './wallet-client-key.js';
 import { useNetworkInfo } from './composables/useWalletState.js';
 import {
   getArkadeExplorerTxUrl,
+  txInvolvesAsset,
   type AssetEntry,
   type TxHistoryEntry,
 } from '@inscrib3/core';
@@ -12,16 +14,15 @@ import { formatAssetAmount, parseAssetAmount, rawToDecimalString } from './forma
 
 type TxEntry = TxHistoryEntry;
 
-// One Ark asset's detail screen, opened from its home row. Sending goes
-// through the shared Send screen.
-const props = defineProps<{ assetId: string }>();
+// One Ark asset's detail screen, opened from its home row with the asset
+// already known. Sending goes through the shared Send screen.
+const props = defineProps<{ asset: AssetEntry }>();
 const emit = defineEmits<{ back: []; send: [] }>();
 
+// The full list, needed to tell whether this wallet holds the control asset.
 const assets = ref<AssetEntry[]>([]);
-const loading = ref(true);
-const error = ref('');
 
-const selected = ref<AssetEntry | null>(null);
+const selected = ref<AssetEntry | null>(props.asset);
 const assetTxs = ref<TxEntry[]>([]);
 const assetTxsLoading = ref(false);
 const operation = ref<'reissue' | 'burn' | null>(null);
@@ -92,18 +93,6 @@ function assetTxLabel(tx: TxEntry): string {
   return assetDirection(tx) === 'send' ? 'Sent' : 'Received';
 }
 
-async function refresh() {
-  loading.value = true;
-  error.value = '';
-  try {
-    assets.value = await client.getAssets();
-  } catch (e: unknown) {
-    error.value = String(e);
-  } finally {
-    loading.value = false;
-  }
-}
-
 const ASSET_TX_POLL_INTERVAL_MS = 20_000;
 let assetTxPollHandle: ReturnType<typeof setInterval> | null = null;
 
@@ -126,23 +115,6 @@ function startAssetTxPolling() {
   }, ASSET_TX_POLL_INTERVAL_MS);
 }
 
-async function openDetail(asset: AssetEntry) {
-  selected.value = asset;
-  assetTxs.value = [];
-  assetTxsLoading.value = true;
-  let txs: TxEntry[] = [];
-  try {
-    txs = await client.getAssetTransactionHistory(asset.assetId);
-  } catch {
-    // leave the list empty on failure
-  }
-  // A newer call can resolve first if the user navigates quickly.
-  if (selected.value?.assetId !== asset.assetId) return;
-  assetTxs.value = txs;
-  assetTxsLoading.value = false;
-  startAssetTxPolling();
-}
-
 function openOperation(next: 'reissue' | 'burn') {
   operation.value = next;
   operationAmount.value = '';
@@ -162,13 +134,20 @@ function setOperationMax() {
   if (selected.value) operationAmount.value = rawToDecimalString(selected.value.amount, decimals.value);
 }
 
+// Both fetched at once: waiting for one before the other doubled the wait.
+// A failed fetch keeps what is already on screen.
 async function refreshSelectedAsset() {
   if (!selected.value) return;
   const current = selected.value;
-  assets.value = await client.getAssets();
-  const updated = assets.value.find((asset) => asset.assetId === current.assetId);
-  selected.value = updated ?? { ...current, amount: 0, displayAmount: 0 };
-  assetTxs.value = await client.getAssetTransactionHistory(current.assetId).catch(() => assetTxs.value);
+  const [freshAssets, freshTxs] = await Promise.all([
+    client.getAssets().catch(() => null),
+    client.getAssetTransactionHistory(current.assetId).catch(() => null),
+  ]);
+  if (freshAssets) {
+    assets.value = freshAssets;
+    selected.value = freshAssets.find((asset) => asset.assetId === current.assetId) ?? { ...current, amount: 0, displayAmount: 0 };
+  }
+  if (freshTxs) assetTxs.value = freshTxs;
 }
 
 async function submitOperation() {
@@ -216,11 +195,15 @@ function backToHome() {
 
 onUnmounted(stopAssetTxPolling);
 
+// Shows what the wallet already has from this session, then refreshes.
 onMounted(async () => {
-  await refresh();
-  const asset = assets.value.find((a) => a.assetId === props.assetId);
-  if (asset) void openDetail(asset);
-  else if (!error.value) error.value = 'This asset is no longer held by this wallet.';
+  const cached = await client.getCachedOverview?.().catch(() => null);
+  if (cached?.assets) assets.value = cached.assets;
+  if (cached?.history) assetTxs.value = cached.history.filter((tx) => txInvolvesAsset(tx, props.asset.assetId));
+  else assetTxsLoading.value = true;
+  await refreshSelectedAsset();
+  assetTxsLoading.value = false;
+  startAssetTxPolling();
 });
 </script>
 
@@ -305,7 +288,7 @@ onMounted(async () => {
 
       <div class="detail-section">
         <p class="section-title">Activity</p>
-        <p v-if="assetTxsLoading" class="hint">Loading…</p>
+        <LoadingHint v-if="assetTxsLoading" />
         <p v-else-if="assetTxs.length === 0" class="hint">No transactions for this asset yet</p>
         <div v-else class="tx-list">
           <div v-for="tx in assetTxs" :key="tx.txid + tx.timestamp" class="tx-row">
@@ -331,12 +314,6 @@ onMounted(async () => {
           </div>
         </div>
       </div>
-    </template>
-
-    <template v-else>
-      <button type="button" class="back" @click="backToHome"><Icon name="arrow-left" :size="14" /> Back</button>
-      <p v-if="loading" class="hint">Loading…</p>
-      <p v-else-if="error" class="error">{{ error }}</p>
     </template>
   </div>
 </template>

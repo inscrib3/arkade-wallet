@@ -1,8 +1,7 @@
 import {
   Wallet,
   RestArkProvider,
-  RestIndexerProvider,
-  EsploraProvider,
+  ContractManager,
   Ramps,
   onchainRail,
   walletFeeSource,
@@ -24,10 +23,12 @@ import {
   type SettlementEvent,
   SettlementEventType,
 } from '@arkade-os/sdk';
+import { CoalescingEsploraProvider, CoalescingIndexerProvider } from './coalescing-providers.js';
 import { hex } from '@scure/base';
 import { generateMnemonic as bip39Generate } from '@scure/bip39';
 import { wordlist } from '@scure/bip39/wordlists/english.js';
 import type { KeyValueStore } from './key-value-store.js';
+import type { CachedWalletOverview } from './wallet-client.js';
 import {
   encryptMnemonic,
   decryptMnemonic,
@@ -419,6 +420,7 @@ export class WalletManager {
   }
 
   async lock(): Promise<void> {
+    this.assets.clearDetailsCache();
     this.identity = null;
     this.signingAddress = null;
     this.stopIncomingFundsWatch();
@@ -460,12 +462,30 @@ export class WalletManager {
   }
 
   async getBalance(): Promise<SerializableWalletBalance> {
-    const balance = await this.getWalletOrThrow().getBalance();
+    return WalletManager.toSerializableBalance(await this.getWalletOrThrow().getBalance());
+  }
+
+  private static toSerializableBalance(balance: Awaited<ReturnType<IWallet['getBalance']>>): SerializableWalletBalance {
     return {
       ...balance,
       assets: toSerializableAssets(balance.assets),
       availableAssets: toSerializableAssets(balance.availableAssets ?? []),
     };
+  }
+
+  // The coins the SDK last saved on this device, read without waiting for the
+  // indexer, so a screen can show something while the first sync runs. Per the
+  // SDK: for display only, never coin selection; boarding funds may be missing
+  // until fetched once. Empty while locked or if the SDK can't answer.
+  async getStoredOverview(): Promise<Pick<CachedWalletOverview, 'balance' | 'vtxos'>> {
+    const wallet = this.wallet;
+    if (!wallet?.getStoredBalance || !wallet.getStoredVtxos) return {};
+    try {
+      const [balance, vtxos] = await Promise.all([wallet.getStoredBalance(), wallet.getStoredVtxos()]);
+      return { balance: WalletManager.toSerializableBalance(balance), vtxos: vtxos.map(WalletManager.toSerializableVtxo) };
+    } catch {
+      return {};
+    }
   }
 
   private static toSerializableVtxo(v: Awaited<ReturnType<IWallet['getVtxos']>>[number]): SerializableVtxo {
@@ -706,6 +726,13 @@ export class WalletManager {
   }
 
   private static readonly FUNDS_WATCH_RETRY_MS = 5_000;
+  private static readonly VTXO_SYNC_MAX_AGE_MS = 30_000;
+  // How far back each sync re-reads, to cover this device's clock running
+  // ahead of the server's (SDK default 24h). The indexer answers in about 0.5 s
+  // per coin returned, so re-reading a busy day took 10-20 s; with 1h it is
+  // under a second when nothing changed. Phones and computers sync their
+  // clocks to well under a minute.
+  private static readonly VTXO_SYNC_OVERLAP_MS = 60 * 60 * 1000;
 
   // Ark, boarding and Lightning.
   async getTransactionHistory(): Promise<TxHistoryEntry[]> {
@@ -828,8 +855,8 @@ export class WalletManager {
       ? deriveAccountIdentity(mnemonic, isMainnet, accountIndex)
       : deriveLegacyAccountIdentity(mnemonic, isMainnet, accountIndex);
 
-    const indexerProvider = new RestIndexerProvider(arkServerUrl);
-    const onchainProvider = new EsploraProvider(esploraUrl);
+    const indexerProvider = new CoalescingIndexerProvider(arkServerUrl);
+    const onchainProvider = new CoalescingEsploraProvider(esploraUrl);
     const scope = accountScopeKey(seedId, accountIndex);
 
     // The delegate adds a third tapleaf (user + delegate + server), which changes
@@ -847,7 +874,12 @@ export class WalletManager {
         ? { delegateProvider: createCachingDelegateProvider(delegateUrl, this.store) }
         : {}),
       storage,
+      // The first sync runs in the background, so stored coins can be shown
+      // at once (getStoredOverview) instead of after the indexer answers.
+      lazyInitialization: true,
+      vtxoSyncOverlapMs: WalletManager.VTXO_SYNC_OVERLAP_MS,
     });
+    this.reuseRecentSync(this.wallet);
     this.intentRepository = storage.intentRepository ?? null;
     this.arkProvider = arkProvider;
     this.password = password;
@@ -862,6 +894,24 @@ export class WalletManager {
 
     const networkInfo = describeNetwork(await loadNetworkSettings(this.store));
     await this.lightning.init(this.wallet, networkInfo, arkProvider, indexerProvider, password, scope, isMainnet);
+  }
+
+  // The SDK default (0) re-syncs with the indexer on every balance, coins or
+  // history read, and on a busy wallet one sync takes 12-14 s. Reads within
+  // this window reuse the last sync; the live subscription still reports new
+  // coins at once. Per the SDK, a send's coin selection can be this stale: the
+  // worst case is the server rejecting a just-spent coin, and a retry works.
+  // Not awaited: the SDK runs its first indexer sync while building the
+  // contract manager, and unlock must not wait for it.
+  private reuseRecentSync(wallet: IWallet): void {
+    void wallet
+      .getContractManager()
+      .then((contractManager) => {
+        if (contractManager instanceof ContractManager) {
+          contractManager.setVtxoSyncMaxAge(WalletManager.VTXO_SYNC_MAX_AGE_MS);
+        }
+      })
+      .catch(() => undefined);
   }
 
   /** Cancels settlement intents that stopped making progress, freeing their coins. */

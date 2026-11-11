@@ -52,6 +52,7 @@ export function createPwaWalletClient(): WalletClient {
     getAssetMetadata: (assetId) => manager.getAssetMetadata(assetId),
     getTransactionHistory: () => manager.getTransactionHistory(),
     getAssetTransactionHistory: (assetId) => manager.getAssetTransactionHistory(assetId),
+    getCachedOverview: () => manager.getStoredOverview(),
 
     send: (address, amount, selectedVtxos) => manager.send(address, amount, selectedVtxos),
     quoteOnchainSend: (address, amount) => manager.quoteOnchainSend(address, amount),

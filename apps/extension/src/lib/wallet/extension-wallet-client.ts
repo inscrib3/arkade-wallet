@@ -21,6 +21,7 @@ export function createExtensionWalletClient(): WalletClient {
     getAssetMetadata: (assetId) => sendToBackground('wallet_getAssetMetadata', { assetId }),
     getTransactionHistory: () => sendToBackground('wallet_getTransactionHistory'),
     getAssetTransactionHistory: (assetId) => sendToBackground('wallet_getAssetTransactionHistory', { assetId }),
+    getCachedOverview: () => sendToBackground('wallet_getCachedOverview'),
 
     send: (address, amount, selectedVtxos) => sendToBackground('wallet_send', { address, amount, selectedVtxos }),
     quoteOnchainSend: (address, amount) => sendToBackground('wallet_quoteOnchainSend', { address, amount }),

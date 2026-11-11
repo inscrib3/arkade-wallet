@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import LoadingHint from './LoadingHint.vue';
 import { computed, onMounted, ref } from 'vue';
 import { getArkadeExplorerTxUrl, type AssetEntry } from '@inscrib3/core';
 import { useWalletClient } from './wallet-client-key.js';
@@ -118,7 +119,7 @@ async function submit() {
           <small>Future supply can be created only while this wallet holds part of the selected control asset.</small>
         </span>
       </label>
-      <p v-if="assetsLoading" class="hint">Loading control assets…</p>
+      <LoadingHint v-if="assetsLoading" label="Loading control assets…" />
       <p v-else-if="assetsError" class="hint warning">Could not load control assets: {{ assetsError }}</p>
       <p v-else-if="heldControlAssets.length === 0" class="hint warning">No control asset is available. Create a non-reissuable asset first if you want to use it as a control asset.</p>
       <label v-else-if="reissuable">

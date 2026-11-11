@@ -153,3 +153,44 @@ describe('AssetService.getTransactionHistory', () => {
     expect(history).toEqual([]);
   });
 });
+
+describe('AssetService details cache', () => {
+  test('looks each asset up once per session, then answers from memory', async () => {
+    const service = new AssetService();
+    let lookups = 0;
+    const wallet = mockWallet({
+      assets: [{ assetId: 'a1', amount: 1n }],
+      assetDetails: async () => (lookups++, { metadata: { ticker: 'CO' } }),
+    });
+    await service.getAssets(wallet);
+    await service.getAssets(wallet);
+    expect(await service.getAssetMetadata(wallet, 'a1')).toEqual({ ticker: 'CO', name: undefined, decimals: undefined, icon: undefined });
+    expect(lookups).toBe(1);
+  });
+
+  test('retries a lookup that failed instead of caching the failure', async () => {
+    const service = new AssetService();
+    let lookups = 0;
+    const wallet = mockWallet({
+      assets: [{ assetId: 'a1', amount: 1n }],
+      assetDetails: async () => {
+        lookups++;
+        if (lookups === 1) throw new Error('down');
+        return { metadata: { ticker: 'CO' } };
+      },
+    });
+    expect((await service.getAssets(wallet))[0].metadata).toBeUndefined();
+    expect((await service.getAssets(wallet))[0].metadata?.ticker).toBe('CO');
+    expect(lookups).toBe(2);
+  });
+
+  test('forgets everything when cleared (on lock)', async () => {
+    const service = new AssetService();
+    let lookups = 0;
+    const wallet = mockWallet({ assets: [{ assetId: 'a1', amount: 1n }], assetDetails: async () => (lookups++, {}) });
+    await service.getAssets(wallet);
+    service.clearDetailsCache();
+    await service.getAssets(wallet);
+    expect(lookups).toBe(2);
+  });
+});

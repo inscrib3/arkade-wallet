@@ -28,19 +28,45 @@ export interface AssetInfo {
   controlAssetId?: string;
 }
 
+type AssetDetails = Awaited<ReturnType<IWallet['assetManager']['getAssetDetails']>>;
+
+// True when the tx moved this asset, in either direction.
+export function txInvolvesAsset(tx: Pick<TxHistoryEntry, 'assets'>, assetId: string): boolean {
+  return tx.assets?.some((a) => a.assetId === assetId) ?? false;
+}
+
+function toDisplayMetadata(details: AssetDetails): AssetInfo['metadata'] {
+  if (!details.metadata) return undefined;
+  return {
+    name: details.metadata.name,
+    ticker: details.metadata.ticker,
+    decimals: details.metadata.decimals,
+    icon: sanitizeIconUrl(details.metadata.icon),
+  };
+}
+
 export class AssetService {
+  // Metadata and control asset are fixed at issuance, so one lookup per asset
+  // is enough for the session. Failed lookups are dropped and retried.
+  private readonly detailsCache = new Map<string, Promise<AssetDetails>>();
+
+  clearDetailsCache(): void {
+    this.detailsCache.clear();
+  }
+
+  private getDetails(wallet: IWallet, assetId: string): Promise<AssetDetails> {
+    const cached = this.detailsCache.get(assetId);
+    if (cached) return cached;
+    const lookup = wallet.assetManager.getAssetDetails(assetId);
+    this.detailsCache.set(assetId, lookup);
+    lookup.catch(() => this.detailsCache.delete(assetId));
+    return lookup;
+  }
+
   // Works for assets no longer held, since it queries by id.
   async getAssetMetadata(wallet: IWallet, assetId: string): Promise<AssetInfo['metadata']> {
     try {
-      const details = await wallet.assetManager.getAssetDetails(assetId);
-      return details.metadata
-        ? {
-            name: details.metadata.name,
-            ticker: details.metadata.ticker,
-            decimals: details.metadata.decimals,
-            icon: sanitizeIconUrl(details.metadata.icon),
-          }
-        : undefined;
+      return toDisplayMetadata(await this.getDetails(wallet, assetId));
     } catch {
       return undefined;
     }
@@ -54,12 +80,9 @@ export class AssetService {
         let metadata: AssetInfo['metadata'];
         let controlAssetId: string | undefined;
         try {
-          const details = await wallet.assetManager.getAssetDetails(asset.assetId);
+          const details = await this.getDetails(wallet, asset.assetId);
           controlAssetId = details.controlAssetId;
-          metadata = details.metadata ? {
-            name: details.metadata.name, ticker: details.metadata.ticker, decimals: details.metadata.decimals,
-            icon: sanitizeIconUrl(details.metadata.icon),
-          } : undefined;
+          metadata = toDisplayMetadata(details);
         } catch { metadata = undefined; }
         const decimals = metadata?.decimals ?? 0;
         const amount = Number(asset.amount);
@@ -78,7 +101,7 @@ export class AssetService {
   async getTransactionHistory(wallet: IWallet, assetId: string, lightningTxids: Set<string>): Promise<TxHistoryEntry[]> {
     const txs = await wallet.getTransactionHistory();
     return txs
-      .filter((tx) => tx.assets?.some((a) => a.assetId === assetId))
-      .map((tx) => toHistoryEntry(tx, lightningTxids));
+      .map((tx) => toHistoryEntry(tx, lightningTxids))
+      .filter((tx) => txInvolvesAsset(tx, assetId));
   }
 }

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import LoadingHint from './LoadingHint.vue';
 import { computed, onActivated, onDeactivated, onMounted, onUnmounted, ref } from 'vue';
 import { useWalletBalance, useBtcPrice, useNetworkInfo, useWalletAddresses } from './composables/useWalletState.js';
 import { useWalletClient } from './wallet-client-key.js';
@@ -65,16 +66,21 @@ function vtxoMempoolUrl(settledTxid: string | undefined): string | null {
 
 // getBalance() carries no ticker/decimals.
 const assets = ref<AssetEntry[]>([]);
+// True until the first answer, so an empty list reads as loading, not as
+// "No assets held".
+const assetsLoading = ref(true);
 async function refreshAssets() {
   try {
     assets.value = await client.getAssets();
   } catch {
     // keep the last list: a failed background refresh shouldn't hide assets
+  } finally {
+    assetsLoading.value = false;
   }
 }
 
 const emit = defineEmits<{
-  'open-asset': [assetId: string];
+  'open-asset': [asset: AssetEntry];
   send: [];
   receive: [];
   'create-asset': [];
@@ -232,7 +238,19 @@ const totalUsd = computed(() => {
   return (totalSats.value / 1e8) * usdPrice.value;
 });
 
-onMounted(() => {
+// Read before the refreshes start, so a slow cache answer can never
+// overwrite fresher data.
+async function showCachedOverview() {
+  const cached = await client.getCachedOverview?.().catch(() => null);
+  if (!cached) return;
+  if (cached.balance) balance.value = cached.balance;
+  if (cached.address) arkAddress.value = cached.address;
+  if (cached.assets) assets.value = cached.assets;
+  if (cached.vtxos) vtxos.value = cached.vtxos;
+}
+
+onMounted(async () => {
+  await showCachedOverview();
   refresh();
   refreshArkAddress();
   refreshPrice();
@@ -260,7 +278,7 @@ onActivated(() => {
   <div class="balance-view">
     <!-- Only the first load blanks the page; later refreshes keep showing the
          last balance. -->
-    <p v-if="loading && !balance" class="hint">Fetching balance…</p>
+    <LoadingHint v-if="loading && !balance" label="Fetching balance…" />
     <p v-else-if="error && !balance" class="error">{{ error }}</p>
     <template v-else-if="balance">
       <p v-if="error" class="error">Couldn't refresh: {{ error }}</p>
@@ -302,8 +320,9 @@ onActivated(() => {
           <p class="section-title">Ark Assets</p>
           <button type="button" class="setup-link" @click="emit('create-asset')">Create asset</button>
         </div>
-        <p v-if="assets.length === 0" class="empty-assets">No assets held</p>
-        <button type="button" class="asset-row clickable" v-for="asset in assets" :key="asset.assetId" @click="emit('open-asset', asset.assetId)">
+        <LoadingHint v-if="assetsLoading && assets.length === 0" class="empty-assets" label="Loading assets…" />
+        <p v-else-if="assets.length === 0" class="empty-assets">No assets held</p>
+        <button type="button" class="asset-row clickable" v-for="asset in assets" :key="asset.assetId" @click="emit('open-asset', asset)">
           <span>{{ asset.metadata?.name ?? tickerOrShortId(asset) }}</span>
           <span class="asset-amount">{{ formatAssetAmount(asset) }} {{ tickerOrShortId(asset) }} <Icon name="chevron-right" :size="12" /></span>
         </button>
@@ -326,7 +345,7 @@ onActivated(() => {
           <Icon :name="showVtxos ? 'arrow-up' : 'arrow-down'" :size="14" />
         </button>
         <div v-if="showVtxos" class="vtxo-list">
-          <p v-if="vtxosLoading && vtxos.length === 0" class="hint">Loading…</p>
+          <LoadingHint v-if="vtxosLoading && vtxos.length === 0" />
           <p v-else-if="vtxos.length === 0" class="hint">No VTXOs</p>
           <template v-else>
             <div class="vtxo-row" v-for="v in vtxos" :key="v.txid + ':' + v.vout">

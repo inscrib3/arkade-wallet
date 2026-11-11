@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import LoadingHint from './LoadingHint.vue';
 import Icon from './Icon.vue';
 
 // The "Advanced: choose coins" frame shared by every send form. Each form
@@ -22,7 +23,7 @@ defineEmits<{ toggle: [] }>();
       <Icon :name="open ? 'arrow-up' : 'arrow-down'" :size="14" />
     </button>
     <div v-if="open" class="coin-control-list">
-      <p v-if="loading" class="hint">Loading…</p>
+      <LoadingHint v-if="loading" />
       <p v-else-if="error" class="error">{{ error }}</p>
       <p v-else-if="isEmpty" class="hint">{{ emptyText }}</p>
       <slot v-else />

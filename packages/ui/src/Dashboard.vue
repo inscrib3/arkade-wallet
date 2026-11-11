@@ -9,7 +9,7 @@ import Activity from './Activity.vue';
 import Assets from './Assets.vue';
 import AssetCreate from './AssetCreate.vue';
 import Icon from './Icon.vue';
-import type { IncomingFundsSummary } from '@inscrib3/core';
+import type { AssetEntry, IncomingFundsSummary } from '@inscrib3/core';
 
 const emit = defineEmits<{ locked: [] }>();
 
@@ -23,7 +23,7 @@ type Screen =
   | { kind: 'send'; asset: string }
   | { kind: 'receive' }
   | { kind: 'create-asset' }
-  | { kind: 'ark-asset'; assetId: string };
+  | { kind: 'ark-asset'; asset: AssetEntry };
 
 const section = ref<Section>('home');
 const screen = ref<Screen>({ kind: 'home' });
@@ -108,7 +108,7 @@ async function lock() {
             :key="dataKey"
             @send="openSend('btc')"
             @receive="screen = { kind: 'receive' }"
-            @open-asset="(assetId) => (screen = { kind: 'ark-asset', assetId })"
+            @open-asset="(asset) => (screen = { kind: 'ark-asset', asset })"
             @create-asset="screen = { kind: 'create-asset' }"
             @see-all-activity="section = 'activity'"
           />
@@ -130,9 +130,9 @@ async function lock() {
           <Assets
             v-else-if="screen.kind === 'ark-asset'"
             :key="dataKey"
-            :asset-id="screen.assetId"
+            :asset="screen.asset"
             @back="goHome"
-            @send="openSend(`ark:${screen.assetId}`)"
+            @send="openSend(`ark:${screen.asset.assetId}`)"
           />
 
           <div v-else-if="screen.kind === 'create-asset'" class="screen">

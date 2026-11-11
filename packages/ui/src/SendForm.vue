@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import LoadingHint from './LoadingHint.vue';
 import { computed, onMounted, ref, watch } from 'vue';
 import { useWalletClient } from './wallet-client-key.js';
 import { useNetworkInfo, useWalletBalance } from './composables/useWalletState.js';
@@ -332,7 +333,7 @@ async function confirmPayment() {
     </template>
 
     <template v-else>
-      <p v-if="lightningAvailable === null" class="hint">Checking Lightning availability…</p>
+      <LoadingHint v-if="lightningAvailable === null" label="Checking Lightning availability…" />
       <p v-else-if="lightningAvailable === false" class="hint">
         Lightning is unavailable right now. It only works on mainnet - on testnets there is no swap provider.
       </p>

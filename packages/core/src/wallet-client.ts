@@ -26,6 +26,16 @@ export interface AssetEntry {
   controlAssetId?: string;
 }
 
+// Data to show while fresh values load: what was fetched this session, or
+// the coins the SDK saved on this device. Each field may be missing.
+export interface CachedWalletOverview {
+  address?: string;
+  balance?: SerializableWalletBalance;
+  vtxos?: SerializableVtxo[];
+  assets?: AssetEntry[];
+  history?: TxHistoryEntry[];
+}
+
 // 'accountChanged' has no payload, so unlike the app-facing 'accountsChanged'
 // it needs no per-origin scoping.
 export type WalletClientEvent =
@@ -57,6 +67,8 @@ export interface WalletClient {
   getAssetMetadata(assetId: string): Promise<AssetEntry['metadata']>;
   getTransactionHistory(): Promise<TxHistoryEntry[]>;
   getAssetTransactionHistory(assetId: string): Promise<TxHistoryEntry[]>;
+  // Null or empty while locked.
+  getCachedOverview?(): Promise<CachedWalletOverview | null>;
 
   send(address: string, amount: number, selectedVtxos?: VtxoOutpoint[]): Promise<string>;
   // Exit fee for an Ark exit of `amount`; it is added on top of the amount.

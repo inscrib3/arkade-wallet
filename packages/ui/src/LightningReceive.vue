@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import LoadingHint from './LoadingHint.vue';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useWalletClient } from './wallet-client-key.js';
 import { useCopyToClipboard } from './composables/useCopyToClipboard.js';
@@ -104,7 +105,7 @@ onUnmounted(stopPolling);
 
 <template>
   <div class="lightning-receive">
-    <p v-if="available === null" class="hint">Checking Lightning availability…</p>
+    <LoadingHint v-if="available === null" label="Checking Lightning availability…" />
     <p v-else-if="available === false" class="hint">
       Lightning is unavailable right now. It only works on mainnet - on testnets there is no swap provider.
     </p>

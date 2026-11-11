@@ -78,6 +78,7 @@ export const INTERNAL_METHODS = [
   'wallet_resetToPrimaryAccount',
   'wallet_getTransactionHistory',
   'wallet_getAssetTransactionHistory',
+  'wallet_getCachedOverview',
   'wallet_isLightningAvailable',
   'wallet_createLightningInvoice',
   'wallet_getLightningInvoiceStatus',

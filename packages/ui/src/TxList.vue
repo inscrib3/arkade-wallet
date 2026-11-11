@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import LoadingHint from './LoadingHint.vue';
 import { computed, onMounted, ref } from 'vue';
 import { useWalletClient } from './wallet-client-key.js';
 import { useNetworkInfo, useAssets } from './composables/useWalletState.js';
@@ -77,7 +78,7 @@ defineExpose({ refresh });
 <template>
   <div class="tx-list-wrap">
     <p class="section-title">{{ type === 'receive' ? 'Received on this address' : 'Sent from here' }}</p>
-    <p v-if="loading" class="hint">Loading…</p>
+    <LoadingHint v-if="loading" />
     <p v-else-if="error" class="error">{{ error }}</p>
     <p v-else-if="filtered.length === 0" class="hint">
       {{ type === 'receive' ? 'Nothing received here yet' : 'Nothing sent here yet' }}

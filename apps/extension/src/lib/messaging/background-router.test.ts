@@ -29,7 +29,7 @@ function area(map: () => Map<string, unknown>) {
     getManifest: () => ({ version: '1.0.0' }),
   },
   storage: { local: area(() => local), session: area(() => session) },
-  alarms: { create: () => alarmsCreated++, clear: async () => true, onAlarm: { addListener() {} } },
+  alarms: { create: () => alarmsCreated++, clear: async () => true, get: async () => undefined, onAlarm: { addListener() {} } },
   tabs: { query: async () => [], sendMessage: async () => undefined },
   windows: {
     create: async ({ url }: { url: string }) => {
@@ -52,6 +52,7 @@ let activeAccount = { seedId: 0, index: 0 };
 let unlocked = true;
 let reconnectFails = false;
 let sendArgs: unknown[] = [];
+let storedOverview: Record<string, unknown> = {};
 const manager = {
   onIncomingFunds: () => () => undefined,
   isUnlocked: () => unlocked,
@@ -59,6 +60,7 @@ const manager = {
   getXOnlyPublicKey: async () => 'ab'.repeat(32),
   getBalance: async () => ({ total: 46_766n }),
   getTransactionHistory: async () => [{ txid: 'ark-tx', layer: 'ark' }],
+  getStoredOverview: async () => storedOverview,
   exportMnemonic: async () => (calls.push('exportMnemonic'), 'seed words'),
   send: async (...args: unknown[]) => {
     calls.push('send');
@@ -112,6 +114,7 @@ beforeEach(() => {
   calls.length = 0;
   activeAccount = { seedId: 0, index: 0 };
   unlocked = true;
+  storedOverview = {};
   new BackgroundRouter(manager as never, memoryStore()).init();
 });
 
@@ -167,6 +170,48 @@ describe('BackgroundRouter unconnected origin', () => {
     expect(alarmsCreated).toBe(0);
     await send('wallet_isUnlocked', undefined, internal);
     expect(alarmsCreated).toBe(1);
+  });
+});
+
+describe('BackgroundRouter cached overview', () => {
+  async function cachedOverview(): Promise<unknown> {
+    return decodeBigints((await send('wallet_getCachedOverview', undefined, internal)).result);
+  }
+
+  test('serves the last fetched balance and history to a reopened popup', async () => {
+    expect(await cachedOverview()).toEqual({});
+    await send('wallet_getBalance', undefined, internal);
+    await send('wallet_getTransactionHistory', undefined, internal);
+    expect(await cachedOverview()).toEqual({
+      balance: { total: 46_766n },
+      history: [{ txid: 'ark-tx', layer: 'ark' }],
+    });
+  });
+
+  test('forgets everything on lock', async () => {
+    await send('wallet_getBalance', undefined, internal);
+    await send('wallet_lock', undefined, internal);
+    expect(await cachedOverview()).toEqual({});
+  });
+
+  test('serves nothing while locked', async () => {
+    await send('wallet_getBalance', undefined, internal);
+    unlocked = false;
+    expect(await cachedOverview()).toBeNull();
+  });
+
+  test('never shows one account\'s data under another', async () => {
+    await send('wallet_getBalance', undefined, internal);
+    activeAccount = { seedId: 0, index: 1 };
+    expect(await cachedOverview()).toEqual({});
+  });
+
+  // Right after unlock nothing was fetched yet: the SDK's saved coins fill in.
+  test('falls back to the coins saved on this device, preferring this session\'s data', async () => {
+    storedOverview = { balance: { total: 1n }, vtxos: [{ txid: 'saved' }] };
+    expect(await cachedOverview()).toEqual(storedOverview);
+    await send('wallet_getBalance', undefined, internal);
+    expect(await cachedOverview()).toEqual({ balance: { total: 46_766n }, vtxos: [{ txid: 'saved' }] });
   });
 });
 

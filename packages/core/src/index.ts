@@ -1,4 +1,5 @@
 export { WalletManager } from './wallet-manager.js';
+export { txInvolvesAsset } from './asset-service.js';
 export type {
   SerializableWalletBalance,
   TxHistoryEntry,
@@ -17,7 +18,7 @@ export type { AccountInfo, ActiveAccount } from './accounts.js';
 export { decodeInvoice } from './bolt11.js';
 export type { InvoiceFacts } from '@arkade-os/swap';
 export type { KeyValueStore } from './key-value-store.js';
-export type { WalletClient, WalletClientEvent, AssetEntry } from './wallet-client.js';
+export type { WalletClient, WalletClientEvent, AssetEntry, CachedWalletOverview } from './wallet-client.js';
 export type { ExitQuote, ExecutorEvent, SettlementEvent } from '@arkade-os/sdk';
 export { SettlementEventType } from '@arkade-os/sdk';
 export {

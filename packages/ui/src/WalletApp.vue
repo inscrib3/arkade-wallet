@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import LoadingHint from './LoadingHint.vue';
 import { onMounted, onUnmounted, ref } from 'vue';
 import UnlockScreen from './UnlockScreen.vue';
 import SetupScreen from './SetupScreen.vue';
@@ -62,7 +63,7 @@ function onLocked() { screen.value = 'unlock'; }
 </script>
 
 <template>
-  <div v-if="screen === 'loading'" class="loading">Loading...</div>
+  <div v-if="screen === 'loading'" class="loading"><LoadingHint /></div>
   <div v-else-if="screen === 'error'" class="loading">
     <p>Couldn't read the wallet's state.</p>
     <button type="button" @click="refreshScreen">Retry</button>
