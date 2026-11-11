@@ -23,7 +23,7 @@ export function cancelAutoLock(): void {
 // been cleared the worker is allowed to stop again.
 function keepWorkerAliveUntilAutoLock(): void {
   if (keepAliveTimer) return;
-  keepAliveTimer = setInterval(async () => {
+  keepAliveTimer = globalThis.setInterval(async () => {
     const autoLockPending = await browser.alarms.get(AUTO_LOCK_ALARM_NAME);
     if (!autoLockPending) stopKeepAlive();
   }, KEEP_ALIVE_INTERVAL_MS);
@@ -31,6 +31,6 @@ function keepWorkerAliveUntilAutoLock(): void {
 
 function stopKeepAlive(): void {
   if (!keepAliveTimer) return;
-  clearInterval(keepAliveTimer);
+  globalThis.clearInterval(keepAliveTimer);
   keepAliveTimer = null;
 }
