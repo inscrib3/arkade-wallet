@@ -10,6 +10,7 @@ import {
   type TxHistoryEntry,
 } from '@inscrib3/core';
 import Icon from './Icon.vue';
+import TxStatusBadge from './TxStatusBadge.vue';
 import { formatAssetAmount, parseAssetAmount, rawToDecimalString } from './format.js';
 
 type TxEntry = TxHistoryEntry;
@@ -308,7 +309,7 @@ onMounted(async () => {
                 class="tx-id tx-id-link"
               >{{ shortTxid(tx.txid) }} ↗</a>
               <span v-else class="tx-id">{{ shortTxid(tx.txid) }}</span>
-              <span class="tx-status" :class="tx.status">{{ tx.status }}</span>
+              <TxStatusBadge :tx="tx" />
             </div>
             <div class="tx-date">{{ formatDate(tx.timestamp) }}</div>
           </div>
@@ -425,9 +426,6 @@ button.submit-btn {
 .tx-amount { font-size: 13px; font-weight: 700; font-family: monospace; }
 .tx-amount.send { color: #ff9f6b; }
 .tx-amount.receive { color: #4caf50; }
-.tx-status { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; padding: 2px 6px; border-radius: 4px; }
-.tx-status.confirmed { background: #0d1f0d; color: #4caf50; }
-.tx-status.pending { background: #1f1a0d; color: #e0a030; }
 .tx-meta { display: flex; justify-content: space-between; align-items: center; }
 .tx-id { font-family: monospace; font-size: 11px; color: #888; }
 .tx-id-link { color: var(--color-accent-secondary); text-decoration: none; }

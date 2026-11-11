@@ -31,7 +31,7 @@ describe('saveNetworkSettings URL validation', () => {
   });
 
   test('rejects a non-URL string', async () => {
-    await expect(saveNetworkSettings(inMemoryStore(), { arkServerUrl: 'not a url', esploraUrl: 'https://example.com' })).rejects.toThrow(/Invalid Ark server URL/);
+    await expect(saveNetworkSettings(inMemoryStore(), { arkServerUrl: 'not a url', esploraUrl: 'https://example.com' })).rejects.toThrow(/Invalid Arkade Operator URL/);
   });
 
   test('rejects an empty string (would silently produce relative-path fetches)', async () => {

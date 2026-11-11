@@ -14,7 +14,8 @@ export default defineConfig({
     },
     // storage, alarms (auto-lock). No tabs or host permissions: tabs.query()
     // still returns ids for broadcasting, and the Ark/Esplora servers allow
-    // cross-origin requests (the PWA relies on that too).
+    // cross-origin requests (the PWA relies on that too). WXT adds sidePanel
+    // itself for entrypoints/sidepanel.
     permissions: ['storage', 'alarms'],
     web_accessible_resources: [
       {

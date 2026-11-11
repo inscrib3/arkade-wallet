@@ -32,7 +32,7 @@ async function unlock() {
   } catch (e: unknown) {
     const msg = String(e);
     if (msg.includes('SERVER_UNREACHABLE')) {
-      error.value = "Password was correct, but couldn't reach the Ark server. Check your network settings and try again.";
+      error.value = "Password was correct, but couldn't reach the Arkade Operator. Check your network settings and try again.";
       errorDetail.value = msg;
       showRecovery.value = true;
     } else if (msg.includes('WALLET_DATA_CORRUPTED')) {

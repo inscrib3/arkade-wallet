@@ -5,6 +5,7 @@ import { useWalletClient } from './wallet-client-key.js';
 import { useNetworkInfo, useAssets } from './composables/useWalletState.js';
 import { getArkadeExplorerTxUrl, getMempoolTxUrl, type TxHistoryEntry } from '@inscrib3/core';
 import Icon from './Icon.vue';
+import TxStatusBadge from './TxStatusBadge.vue';
 
 // Ark layers only: 'onchain' is Ark's boarding address - see
 // TxHistoryEntry.layer.
@@ -87,7 +88,7 @@ defineExpose({ refresh });
       <div v-for="tx in filtered" :key="tx.txid + tx.timestamp" class="tx-row">
         <div class="tx-main">
           <span class="tx-amount" :class="type">{{ type === 'receive' ? '+' : '-' }}{{ sats(tx.amount) }} sats</span>
-          <span class="tx-status" :class="tx.status">{{ tx.status }}</span>
+          <TxStatusBadge :tx="tx" />
         </div>
         <div v-if="tx.assets?.length" class="tx-assets">
           <span v-for="a in tx.assets" :key="a.assetId" class="tx-asset-chip" :class="assetDirection(a.isMint)">
@@ -155,9 +156,6 @@ defineExpose({ refresh });
 }
 .tx-asset-chip.send { color: #ff9f6b; }
 .tx-asset-chip.receive { color: var(--color-success); }
-.tx-status { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; padding: 2px 6px; border-radius: 4px; }
-.tx-status.confirmed { background: #0d1f0d; color: var(--color-success); }
-.tx-status.pending { background: #1f1a0d; color: #e0a030; }
 .tx-meta { display: flex; justify-content: space-between; align-items: center; }
 .tx-id-group { display: flex; align-items: center; gap: 8px; }
 .tx-id { font-family: monospace; font-size: 11px; color: var(--color-text-muted); }

@@ -44,13 +44,13 @@ const selectedArkAsset = computed(() =>
 );
 
 const placeholder = computed(() =>
-  asset.value.startsWith('ark:') ? 'Ark address (ark1…)' : 'Ark address, Bitcoin address, or Lightning invoice',
+  asset.value.startsWith('ark:') ? 'Arkade address (ark1…)' : 'Arkade address, Bitcoin address, or Lightning invoice',
 );
 
 const detection = computed(() => classifyPaymentTarget(recipient.value));
 const detectedLabel = computed(() => {
   if (!recipient.value.trim() || !detection.value.ok) return '';
-  return { ark: 'Ark address', onchain: 'Bitcoin address', lightning: 'Lightning invoice' }[detection.value.target.rail];
+  return { ark: 'Arkade address', onchain: 'Bitcoin address', lightning: 'Lightning invoice' }[detection.value.target.rail];
 });
 
 type Route =
@@ -66,7 +66,7 @@ const route = computed<Route | null>(() => {
   const { rail, target } = result.target;
 
   if (asset.value.startsWith('ark:')) {
-    if (rail !== 'ark') return { form: 'error', message: 'Ark assets can only be sent to an Ark address (ark1…).' };
+    if (rail !== 'ark') return { form: 'error', message: 'Ark assets can only be sent to an Arkade address (ark1…).' };
     return selectedArkAsset.value ? { form: 'ark-asset', asset: selectedArkAsset.value, target } : null;
   }
   return { form: 'arkade' };

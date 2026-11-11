@@ -1,4 +1,4 @@
-import type { AssetEntry } from '@inscrib3/core';
+import type { AssetEntry, TxHistoryEntry } from '@inscrib3/core';
 
 // toLocaleString() defaults to 3 fraction digits and rounds up
 // (0.99996 -> "1"), which would overstate a balance.
@@ -57,4 +57,11 @@ export function rawToDecimalString(raw: number, decimals: number): string {
 // String(e) and messages relayed through the background add.
 export function errorText(e: unknown): string {
   return String(e).replace(/^(Error:\s*)+/, '');
+}
+
+// Preconfirmed Ark and Lightning txs are already spendable and need nothing
+// from the user, so only an onchain deposit still waiting to settle reads as
+// pending.
+export function isAwaitingOnchainConfirmation(tx: Pick<TxHistoryEntry, 'status' | 'layer'>): boolean {
+  return tx.layer === 'onchain' && tx.status === 'pending';
 }

@@ -40,7 +40,7 @@ async function confirmReset() {
     error.value = msg.includes('INCORRECT_PASSWORD')
       ? 'Incorrect password'
       : msg.includes('SERVER_UNREACHABLE')
-        ? 'Could not reach the Ark server - try again'
+        ? 'Could not reach the Arkade Operator - try again'
         : msg;
   } finally {
     loading.value = false;
@@ -73,7 +73,7 @@ async function confirmReset() {
           This deletes the wallet and all its local data from this device. This action cannot be undone. Make sure every seed phrase is backed up before continuing.
         </template>
         <template v-else>
-          This wipes the local transaction cache and re-syncs from the Ark server. Your seed phrase is not affected.
+          This wipes the local transaction cache and re-syncs from the Arkade Operator. Your seed phrase is not affected.
         </template>
       </p>
       <label>

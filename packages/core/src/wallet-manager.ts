@@ -682,7 +682,7 @@ export class WalletManager {
       throw new Error(
         quote.total <= free + underAssets
           ? `${shortfall} Another ${underAssets} sats sit in VTXOs that also carry an asset, and an asset can't exit onchain. ` +
-              'Send the full amount of each asset to your own Ark address first (Assets tab, Max): the leftover sats come back as a separate VTXO you can exit.'
+              'Send the full amount of each asset to your own Arkade address first (Assets tab, Max): the leftover sats come back as a separate VTXO you can exit.'
           : shortfall,
       );
     }
@@ -708,7 +708,7 @@ export class WalletManager {
     if (spendable.length > 0 && spendable.every((v) => v.assets?.length)) {
       throw new Error(
         'All your spendable sats sit in VTXOs that also carry an asset, and an asset cannot exit onchain. ' +
-          'Send the full amount of each asset to your own Ark address first (Assets tab, Max): the leftover sats come back as a separate VTXO you can exit.',
+          'Send the full amount of each asset to your own Arkade address first (Assets tab, Max): the leftover sats come back as a separate VTXO you can exit.',
       );
     }
     // Run for its clear errors (asset-locked sats, not enough to cover the fee).

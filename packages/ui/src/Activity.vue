@@ -5,6 +5,7 @@ import { useWalletClient } from './wallet-client-key.js';
 import { useNetworkInfo, useAssets } from './composables/useWalletState.js';
 import { getArkadeExplorerTxUrl, getMempoolTxUrl, type TxHistoryEntry } from '@inscrib3/core';
 import Icon from './Icon.vue';
+import TxStatusBadge from './TxStatusBadge.vue';
 import ToggleGroup, { type ToggleOption } from './ToggleGroup.vue';
 
 type TxEntry = TxHistoryEntry;
@@ -180,7 +181,7 @@ onUnmounted(stopPolling);
               class="tx-id-link mempool-link"
             >mempool ↗</a>
           </div>
-          <span class="tx-status" :class="tx.status">{{ tx.status }}</span>
+          <TxStatusBadge :tx="tx" />
         </div>
         <div class="tx-date">{{ formatDate(tx.timestamp) }}</div>
       </div>
@@ -232,9 +233,6 @@ onUnmounted(stopPolling);
 .tx-id-link { color: var(--color-accent-secondary); text-decoration: none; }
 .tx-id-link:hover { text-decoration: underline; }
 .mempool-link { font-size: 10px; }
-.tx-status { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; padding: 2px 6px; border-radius: 4px; }
-.tx-status.confirmed { background: #0d1f0d; color: var(--color-success); }
-.tx-status.pending { background: #1f1a0d; color: #e0a030; }
 .tx-date { font-size: 11px; color: #666; }
 .refresh {
   display: flex;

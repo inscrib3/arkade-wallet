@@ -142,7 +142,7 @@ onMounted(async () => {
   <section class="recovery">
     <h2>Emergency recovery</h2>
     <p class="hint warning">
-      Only use this if you can't use the wallet normally, or don't trust the Ark server. It moves your funds directly onto the Bitcoin blockchain using each VTXO's own timelocked exit path — no Ark server involved. This is a real onchain process and can take hours to days to fully complete.
+      Only use this if you can't use the wallet normally, or don't trust the Arkade Operator. It moves your funds directly onto the Bitcoin blockchain using each VTXO's own timelocked exit path — no Arkade Operator involved. This is a real onchain process and can take hours to days to fully complete.
     </p>
 
     <template v-if="phase === 'idle'">

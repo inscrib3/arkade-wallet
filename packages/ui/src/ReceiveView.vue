@@ -41,7 +41,7 @@ onMounted(() => {
         <QrCode :value="unifiedUri" :size="180" />
         <p class="section-title mt">Unified (Ark + boarding)</p>
         <p class="hint">
-          One code for any Bitcoin wallet: an Ark-aware wallet pays your Ark address instantly offchain, any other wallet pays your boarding address onchain.
+          One code for any Bitcoin wallet: an Ark-aware wallet pays your Arkade address instantly offchain, any other wallet pays your boarding address onchain.
         </p>
         <div class="address-box">
           <span class="address-text">{{ unifiedUri }}</span>
@@ -53,7 +53,7 @@ onMounted(() => {
 
       <template v-else-if="arkadeMode === 'ark'">
         <QrCode :value="address" :size="180" />
-        <p class="section-title mt">Ark address (offchain)</p>
+        <p class="section-title mt">Arkade address (offchain)</p>
         <div class="address-box">
           <span class="address-text">{{ address }}</span>
           <button type="button" class="copy-icon-btn" @click="copyAddress(address)" title="Copy address">

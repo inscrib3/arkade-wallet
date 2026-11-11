@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { AssetEntry } from '@inscrib3/core';
-import { errorText, formatAssetAmount, formatCompactAssetAmount, parseAssetAmount, rawToDecimalString } from './format.js';
+import { errorText, formatAssetAmount, formatCompactAssetAmount, isAwaitingOnchainConfirmation, parseAssetAmount, rawToDecimalString } from './format.js';
 
 function asset(overrides: { displayAmount: number; decimals?: number }): AssetEntry {
   return {
@@ -89,5 +89,14 @@ describe('formatCompactAssetAmount', () => {
     expect(formatCompactAssetAmount(asset({ displayAmount: 10.001, decimals: 3 }))).toBe('10.001');
     expect(formatCompactAssetAmount(asset({ displayAmount: 0.000196, decimals: 6 }))).toBe('0.000196');
     expect(formatCompactAssetAmount(asset({ displayAmount: 1 }))).toBe('1');
+  });
+});
+
+describe('isAwaitingOnchainConfirmation', () => {
+  test('only an unsettled onchain deposit is pending', () => {
+    expect(isAwaitingOnchainConfirmation({ layer: 'onchain', status: 'pending' })).toBe(true);
+    expect(isAwaitingOnchainConfirmation({ layer: 'ark', status: 'pending' })).toBe(false);
+    expect(isAwaitingOnchainConfirmation({ layer: 'lightning', status: 'pending' })).toBe(false);
+    expect(isAwaitingOnchainConfirmation({ layer: 'onchain', status: 'confirmed' })).toBe(false);
   });
 });

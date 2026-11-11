@@ -1143,7 +1143,7 @@ describe('WalletManager.sendOnchain with only asset VTXOs', () => {
       getSpendableVtxos: async () => [{ txid: 'a'.repeat(64), vout: 0, value: 46_766, assets: [{ assetId: 'x', amount: 1n }] }] as never,
       settle: async () => ((settled = true), 'txid'),
     });
-    await expect(manager.sendOnchain('bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq', 5_000)).rejects.toThrow(/Send the full amount of each asset to your own Ark address/);
+    await expect(manager.sendOnchain('bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq', 5_000)).rejects.toThrow(/Send the full amount of each asset to your own Arkade address/);
     expect(settled).toBe(false);
   });
 });

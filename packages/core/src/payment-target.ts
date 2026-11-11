@@ -43,7 +43,7 @@ export function classifyPaymentTarget(raw: string): PaymentTargetResult {
 
   if (isLnurl(trimmed)) return fail('LNURL and Lightning addresses are not supported yet');
 
-  return fail("Not an Ark address, Bitcoin address, or Lightning invoice");
+  return fail("Not an Arkade address, Bitcoin address, or Lightning invoice");
 }
 
 // The receive screen's one QR for Arkade, in Arkade's own format

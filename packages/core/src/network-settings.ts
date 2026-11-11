@@ -77,7 +77,7 @@ function assertValidServerUrl(url: string, label: string): void {
 }
 
 export async function saveNetworkSettings(store: KeyValueStore, settings: NetworkSettings): Promise<void> {
-  assertValidServerUrl(settings.arkServerUrl, 'Ark server URL');
+  assertValidServerUrl(settings.arkServerUrl, 'Arkade Operator URL');
   assertValidServerUrl(settings.esploraUrl, 'Esplora URL');
   await store.set(STORAGE_KEY, { ...settings, arkServerUrl: canonicalServerUrl(settings.arkServerUrl) });
 }

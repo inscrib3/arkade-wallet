@@ -81,7 +81,7 @@ async function saveNetwork() {
       </p>
 
       <label>
-        Ark server URL
+        Arkade Operator URL
         <input type="text" v-model="arkServerUrl" placeholder="https://mutinynet.arkade.sh" />
       </label>
       <label>

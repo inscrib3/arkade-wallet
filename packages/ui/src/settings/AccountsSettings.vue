@@ -100,7 +100,7 @@ async function switchTo(seedId: number, accountIndex: number) {
     await client.switchAccount(seedId, accountIndex);
     await refreshAccounts();
   } catch (e: unknown) {
-    switchError.value = String(e).includes('SERVER_UNREACHABLE') ? 'Could not reach the Ark server - try again' : String(e);
+    switchError.value = String(e).includes('SERVER_UNREACHABLE') ? 'Could not reach the Arkade Operator - try again' : String(e);
   } finally {
     switchingTo.value = null;
   }
@@ -130,7 +130,7 @@ async function confirmAddAccount() {
     await refreshAccounts();
   } catch (e: unknown) {
     const msg = String(e);
-    addAccountError.value = msg.includes('SERVER_UNREACHABLE') ? 'Could not reach the Ark server - try again' : msg;
+    addAccountError.value = msg.includes('SERVER_UNREACHABLE') ? 'Could not reach the Arkade Operator - try again' : msg;
   } finally {
     addAccountLoading.value = false;
   }
@@ -166,7 +166,7 @@ async function confirmImportSeed() {
     await refreshAccounts();
   } catch (e: unknown) {
     const msg = String(e);
-    importError.value = msg.includes('SERVER_UNREACHABLE') ? 'Could not reach the Ark server - try again' : msg;
+    importError.value = msg.includes('SERVER_UNREACHABLE') ? 'Could not reach the Arkade Operator - try again' : msg;
   } finally {
     importLoading.value = false;
   }

@@ -5,10 +5,10 @@ A web page can talk to this wallet in two ways:
 | | Browser extension | PWA popup |
 |---|---|---|
 | How | `window.arkade`, injected into every page | Open the PWA in a popup with URL parameters; it answers with `postMessage` |
-| What you can do | Everything below | Connect, and send BTC to an Ark address |
+| What you can do | Everything below | Connect, and send BTC to an Arkade address |
 | Use when | The user has the extension installed | Fallback when `window.arkade` is missing |
 
-All amounts are **satoshis, as positive integers**. Sends go to **Ark addresses** only (`ark1…` on mainnet, `tark1…` on Mutinynet); onchain and Lightning destinations are not accepted from apps.
+All amounts are **satoshis, as positive integers**. Sends go to **Arkade addresses** only (`ark1…` on mainnet, `tark1…` on Mutinynet); onchain and Lightning destinations are not accepted from apps.
 
 ## Extension: `window.arkade`
 
@@ -44,12 +44,12 @@ The connection is to the wallet, not to one account: after the user switches acc
 
 | Method | Returns | Approval window |
 |---|---|---|
-| `connect()` | `string[]`: the active Ark address | First time per origin |
+| `connect()` | `string[]`: the active Arkade address | First time per origin |
 | `disconnect()` | `true` | No |
 | `isConnected()` | `boolean` | No |
 | `getAccounts()` | `string[]`, empty if not connected or locked | No |
 | `getProviderState()` | `{ isConnected, isUnlocked, network, accounts }` | No |
-| `getAddress()` | Ark address | No |
+| `getAddress()` | Arkade address | No |
 | `getBoardingAddress()` | Onchain address that moves BTC into Ark | No |
 | `getXOnlyPublicKey()` | Hex x-only public key of the Ark signing key | No |
 | `getBalance()` | `BalanceInfo` (below) | No |

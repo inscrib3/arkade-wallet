@@ -48,7 +48,7 @@ onMounted(loadConnection);
     <template v-else-if="connection">
       <div class="conn-card">
         <div class="conn-head">
-          <h3>Ark server</h3>
+          <h3>Arkade Operator</h3>
           <span class="badge" :class="connection.arkReachable ? 'ok' : 'down'">
             {{ connection.arkReachable ? 'Reachable' : 'Unreachable' }}
           </span>

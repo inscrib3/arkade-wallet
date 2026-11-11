@@ -85,7 +85,7 @@ describe('classifyPaymentTarget BOLT12', () => {
 });
 
 describe('createUnifiedReceiveUri', () => {
-  test('encodes the boarding address with the Ark address as ark=', () => {
+  test('encodes the boarding address with the Arkade address as ark=', () => {
     expect(createUnifiedReceiveUri(BTC, ARK)).toBe(`bitcoin:${BTC}?ark=${ARK}`);
   });
 

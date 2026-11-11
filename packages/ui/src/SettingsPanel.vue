@@ -34,7 +34,7 @@ interface MenuItem {
 const view = ref<SettingsView>('menu');
 
 const MENU: MenuItem[] = [
-  { id: 'connection', title: 'Connection', subtitle: 'Which Ark server and delegator this wallet uses', icon: 'server' },
+  { id: 'connection', title: 'Connection', subtitle: 'Which Arkade Operator and delegator this wallet uses', icon: 'server' },
   { id: 'network', title: 'Network', subtitle: 'Switch network, or point at your own server', icon: 'globe' },
   { id: 'accounts', title: 'Accounts', subtitle: 'Add, rename, switch or import accounts', icon: 'users' },
   { id: 'seed', title: 'Seed phrase', subtitle: 'Reveal and back up your recovery words', icon: 'key' },

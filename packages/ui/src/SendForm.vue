@@ -229,9 +229,9 @@ function describeAmountTooLow(msg: string): string {
   const minimum = msg.match(/min vtxo amount: (\d+)/)?.[1];
   const limit = minimum ? `${Number(minimum).toLocaleString()} sats` : 'its minimum';
   if (/output #0\b/.test(msg)) {
-    return `Amount too low: the Ark server only accepts sends of at least ${limit}. Nothing was sent.`;
+    return `Amount too low: the Arkade Operator only accepts sends of at least ${limit}. Nothing was sent.`;
   }
-  return `The change coming back to you would be below the Ark server's minimum of ${limit}. Pick coins that leave at least that much change, or send a coin's full value. Nothing was sent.`;
+  return `The change coming back to you would be below the Arkade Operator's minimum of ${limit}. Pick coins that leave at least that much change, or send a coin's full value. Nothing was sent.`;
 }
 
 // Two steps so the swap fee is shown before anything is paid.
