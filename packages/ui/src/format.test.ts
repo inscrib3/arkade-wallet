@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { AssetEntry } from '@inscrib3/core';
-import { errorText, formatAssetAmount, parseAssetAmount, rawToDecimalString } from './format.js';
+import { errorText, formatAssetAmount, formatCompactAssetAmount, parseAssetAmount, rawToDecimalString } from './format.js';
 
 function asset(overrides: { displayAmount: number; decimals?: number }): AssetEntry {
   return {
@@ -68,5 +68,26 @@ describe('errorText', () => {
   test('drops the "Error: " prefixes a relayed error picks up', () => {
     expect(errorText(new Error('Error: Server unreachable'))).toBe('Server unreachable');
     expect(errorText('plain text')).toBe('plain text');
+  });
+});
+
+describe('formatCompactAssetAmount', () => {
+  test('shortens large amounts with K, M, B and T', () => {
+    expect(formatCompactAssetAmount(asset({ displayAmount: 836_393.97, decimals: 2 }))).toBe('836.39K');
+    expect(formatCompactAssetAmount(asset({ displayAmount: 20_000 }))).toBe('20K');
+    expect(formatCompactAssetAmount(asset({ displayAmount: 3_450_000 }))).toBe('3.45M');
+    expect(formatCompactAssetAmount(asset({ displayAmount: 7_100_000_000 }))).toBe('7.1B');
+    expect(formatCompactAssetAmount(asset({ displayAmount: 2_000_000_000_000 }))).toBe('2T');
+  });
+
+  test('cuts digits instead of rounding up, so the balance is never overstated', () => {
+    expect(formatCompactAssetAmount(asset({ displayAmount: 999_999 }))).toBe('999.99K');
+    expect(formatCompactAssetAmount(asset({ displayAmount: 0.9999999, decimals: 8 }))).toBe('0.999999');
+  });
+
+  test('keeps small amounts as they are, up to the asset decimals', () => {
+    expect(formatCompactAssetAmount(asset({ displayAmount: 10.001, decimals: 3 }))).toBe('10.001');
+    expect(formatCompactAssetAmount(asset({ displayAmount: 0.000196, decimals: 6 }))).toBe('0.000196');
+    expect(formatCompactAssetAmount(asset({ displayAmount: 1 }))).toBe('1');
   });
 });

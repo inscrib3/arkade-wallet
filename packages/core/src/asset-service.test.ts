@@ -194,3 +194,33 @@ describe('AssetService details cache', () => {
     expect(lookups).toBe(2);
   });
 });
+
+describe('AssetService.getAssets order', () => {
+  function walletWith(history: Array<{ assetId: string; createdAt: number }>) {
+    return {
+      getBalance: async () => ({ assets: [{ assetId: 'old', amount: 1n }], }),
+      assetManager: { getAssetDetails: async () => ({}) },
+      getTransactionHistory: async () => history.map((h) => ({ createdAt: h.createdAt, assets: [{ assetId: h.assetId, amount: 1n }] })),
+    } as unknown as IWallet;
+  }
+
+  test('lists the most recently received asset first, whatever order the server used', async () => {
+    const wallet = walletWith([
+      { assetId: 'old', createdAt: 100 },
+      { assetId: 'new', createdAt: 300 },
+      { assetId: 'mid', createdAt: 200 },
+      { assetId: 'old', createdAt: 400 },
+    ]);
+    wallet.getBalance = (async () => ({ assets: ['old', 'mid', 'new'].map((assetId) => ({ assetId, amount: 1n })) })) as never;
+    const ids = (await new AssetService().getAssets(wallet)).map((a) => a.assetId);
+    expect(ids).toEqual(['new', 'mid', 'old']);
+  });
+
+  test('falls back to a fixed id order when history is unavailable', async () => {
+    const wallet = walletWith([]);
+    wallet.getTransactionHistory = (async () => { throw new Error('down'); }) as never;
+    wallet.getBalance = (async () => ({ assets: ['b', 'c', 'a'].map((assetId) => ({ assetId, amount: 1n })) })) as never;
+    const ids = (await new AssetService().getAssets(wallet)).map((a) => a.assetId);
+    expect(ids).toEqual(['a', 'b', 'c']);
+  });
+});

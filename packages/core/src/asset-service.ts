@@ -45,6 +45,32 @@ function toDisplayMetadata(details: AssetDetails): AssetInfo['metadata'] {
   };
 }
 
+// Earliest transaction time per asset in this wallet's history. Empty if the
+// history can't be read: the order then falls back to asset id.
+async function firstSeenTimes(wallet: IWallet): Promise<Map<string, number>> {
+  const firstSeen = new Map<string, number>();
+  try {
+    for (const tx of await wallet.getTransactionHistory()) {
+      for (const { assetId } of tx.assets ?? []) {
+        const known = firstSeen.get(assetId);
+        if (known === undefined || tx.createdAt < known) firstSeen.set(assetId, tx.createdAt);
+      }
+    }
+  } catch {
+    // order by id below
+  }
+  return firstSeen;
+}
+
+// Assets with no known time go last; ties are broken by id so the order
+// never depends on the server's.
+function compareNewestFirst(a: string, b: string, firstSeen: Map<string, number>): number {
+  const timeA = firstSeen.get(a) ?? -Infinity;
+  const timeB = firstSeen.get(b) ?? -Infinity;
+  if (timeA !== timeB) return timeB - timeA;
+  return a.localeCompare(b);
+}
+
 export class AssetService {
   // Metadata and control asset are fixed at issuance, so one lookup per asset
   // is enough for the session. Failed lookups are dropped and retried.
@@ -73,9 +99,11 @@ export class AssetService {
   }
 
   // SDK balances are bigint; returned as number to match the app-facing API.
+  // Newest first: ordered by when this wallet first received or minted each
+  // asset, so the list keeps the same order between loads.
   async getAssets(wallet: IWallet): Promise<AssetInfo[]> {
-    const { assets } = await wallet.getBalance();
-    return Promise.all(
+    const [{ assets }, firstSeen] = await Promise.all([wallet.getBalance(), firstSeenTimes(wallet)]);
+    const entries = await Promise.all(
       assets.map(async (asset) => {
         let metadata: AssetInfo['metadata'];
         let controlAssetId: string | undefined;
@@ -96,6 +124,7 @@ export class AssetService {
         };
       }),
     );
+    return entries.sort((a, b) => compareNewestFirst(a.assetId, b.assetId, firstSeen));
   }
 
   async getTransactionHistory(wallet: IWallet, assetId: string, lightningTxids: Set<string>): Promise<TxHistoryEntry[]> {

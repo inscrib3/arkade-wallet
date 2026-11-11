@@ -14,7 +14,7 @@ import {
 } from '@inscrib3/core';
 import Icon from './Icon.vue';
 import Activity from './Activity.vue';
-import { formatAssetAmount } from './format.js';
+import { formatCompactAssetAmount, shortAssetId } from './format.js';
 
 // The home screen: the total, the Arkade wallet (offchain + 2-of-2 boarding
 // address), then the latest activity.
@@ -32,7 +32,7 @@ function usd(n: number): string {
 }
 
 function tickerOrShortId(asset: AssetEntry): string {
-  return asset.metadata?.ticker ?? `${asset.assetId.slice(0, 8)}…`;
+  return asset.metadata?.ticker ?? shortAssetId(asset.assetId);
 }
 
 function shortTxid(txid: string): string {
@@ -323,8 +323,15 @@ onActivated(() => {
         <LoadingHint v-if="assetsLoading && assets.length === 0" class="empty-assets" label="Loading assets…" />
         <p v-else-if="assets.length === 0" class="empty-assets">No assets held</p>
         <button type="button" class="asset-row clickable" v-for="asset in assets" :key="asset.assetId" @click="emit('open-asset', asset)">
-          <span>{{ asset.metadata?.name ?? tickerOrShortId(asset) }}</span>
-          <span class="asset-amount">{{ formatAssetAmount(asset) }} {{ tickerOrShortId(asset) }} <Icon name="chevron-right" :size="12" /></span>
+          <span class="asset-label">
+            <span class="asset-name">{{ asset.metadata?.name ?? tickerOrShortId(asset) }}</span>
+            <span class="asset-id">{{ shortAssetId(asset.assetId) }}</span>
+          </span>
+          <span class="asset-value">
+            <span class="asset-amount">{{ formatCompactAssetAmount(asset) }}</span>
+            <span class="asset-ticker">{{ tickerOrShortId(asset) }}</span>
+          </span>
+          <Icon name="chevron-right" :size="12" class="asset-chevron" />
         </button>
       </div>
 
@@ -483,16 +490,24 @@ onActivated(() => {
   padding: 12px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
   margin-top: 8px;
 }
 .assets-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .empty-assets { color: var(--color-text-muted); font-size: 12px; }
 .section-title { font-size: 11px; color: var(--color-accent); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
-.asset-row { display: flex; justify-content: space-between; font-size: 13px; color: #aaa; }
+/* Two lines per asset. The name side shrinks and cuts with "…", the amount
+   never wraps, so the two can't collide at any width. */
+.asset-row { display: flex; align-items: center; gap: 12px; font-size: 13px; color: #aaa; }
 .asset-row.clickable { background: none; border: none; cursor: pointer; padding: 0; text-align: left; width: 100%; }
 .asset-row.clickable:hover .asset-amount { color: var(--color-accent); }
-.asset-amount { display: flex; align-items: center; gap: 4px; font-family: monospace; color: var(--color-text); }
+.asset-label { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.asset-value { max-width: 50%; min-width: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.asset-name, .asset-ticker { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.asset-id, .asset-ticker { font-size: 11px; color: var(--color-text-muted); }
+.asset-id { font-family: var(--font-mono); }
+.asset-amount { font-family: var(--font-mono); color: var(--color-text); white-space: nowrap; }
+.asset-chevron { flex-shrink: 0; color: var(--color-text-muted); }
 .setup-link {
   background: none;
   border: none;

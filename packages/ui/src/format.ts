@@ -8,6 +8,27 @@ export function formatAssetAmount(asset: AssetEntry): string {
   });
 }
 
+// Tells apart assets that share a name.
+export function shortAssetId(assetId: string): string {
+  return `${assetId.slice(0, 8)}…`;
+}
+
+const COMPACT_FROM = 1000;
+const SMALL_AMOUNT_MAX_FRACTION_DIGITS = 6;
+
+// For lists: 836,393.97 -> "836.39K", 2,000,000,000,000 -> "2T". Digits are cut,
+// never rounded up, so a balance is never shown bigger than it is; the asset's
+// own screen shows the exact amount. K/M/B/T on purpose, whatever the locale.
+export function formatCompactAssetAmount(asset: AssetEntry): string {
+  const decimals = Math.max(asset.metadata?.decimals ?? 0, 0);
+  const amount = asset.displayAmount;
+  const options: Intl.NumberFormatOptions & { roundingMode: 'trunc' } =
+    Math.abs(amount) >= COMPACT_FROM
+      ? { notation: 'compact', maximumFractionDigits: 2, roundingMode: 'trunc' }
+      : { maximumFractionDigits: Math.min(decimals, SMALL_AMOUNT_MAX_FRACTION_DIGITS), roundingMode: 'trunc' };
+  return amount.toLocaleString('en-US', options);
+}
+
 // Exact decimal string -> raw units. null for malformed input, more fraction
 // digits than the asset has, or a value past MAX_SAFE_INTEGER - never rounded,
 // so a send can't silently move more than was typed.
