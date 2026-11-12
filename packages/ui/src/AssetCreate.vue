@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BusyLabel from './BusyLabel.vue';
 import LoadingHint from './LoadingHint.vue';
 import { computed, onMounted, ref } from 'vue';
 import { getArkadeExplorerTxUrl, type AssetEntry } from '@inscrib3/core';
@@ -154,7 +155,7 @@ async function submit() {
     </div>
 
     <button class="submit-btn" type="button" :disabled="loading || !confirmed" @click="submit">
-      {{ loading ? 'Creating…' : 'Create asset' }}
+      <BusyLabel :busy="loading" busy-text="Creating…">Create asset</BusyLabel>
     </button>
   </div>
 </template>

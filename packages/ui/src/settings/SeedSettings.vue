@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BusyLabel from '../BusyLabel.vue';
 import { ref } from 'vue';
 import { useWalletClient } from '../wallet-client-key.js';
 import { useCopyToClipboard } from '../composables/useCopyToClipboard.js';
@@ -54,7 +55,7 @@ function hideMnemonic() {
       </label>
       <p v-if="exportError" class="error">{{ exportError }}</p>
       <button @click="revealMnemonic" :disabled="exportLoading || !exportPassword">
-        {{ exportLoading ? 'Checking…' : 'Reveal seed phrase' }}
+        <BusyLabel :busy="exportLoading" busy-text="Checking…">Reveal seed phrase</BusyLabel>
       </button>
     </template>
 

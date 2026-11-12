@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BusyLabel from '../BusyLabel.vue';
 import { ref } from 'vue';
 import { useWalletClient } from '../wallet-client-key.js';
 
@@ -88,7 +89,7 @@ async function confirmReset() {
       </label>
       <p v-if="error" class="error">{{ error }}</p>
       <button type="button" class="danger" @click="confirmReset" :disabled="loading || !password">
-        {{ loading ? 'Resetting…' : action === 'wallet' ? 'Delete everything and reset' : 'Reset cache and re-sync' }}
+        <BusyLabel :busy="loading" busy-text="Resetting…">{{ action === 'wallet' ? 'Delete everything and reset' : 'Reset cache and re-sync' }}</BusyLabel>
       </button>
       <button type="button" class="secondary" @click="cancelReset" :disabled="loading">Cancel</button>
     </template>

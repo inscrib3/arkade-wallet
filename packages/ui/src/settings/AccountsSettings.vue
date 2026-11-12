@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BusyLabel from '../BusyLabel.vue';
 import { computed, onMounted, ref } from 'vue';
 import type { AccountInfo } from '@inscrib3/core';
 import { useWalletClient } from '../wallet-client-key.js';
@@ -197,7 +198,7 @@ async function confirmImportSeed() {
               <span class="account-label">Remove "{{ acc.label }}"?</span>
               <div class="account-actions">
                 <button type="button" class="danger revoke-btn" @click="confirmRemove" :disabled="removeLoading">
-                  {{ removeLoading ? 'Removing…' : 'Yes, remove' }}
+                  <BusyLabel :busy="removeLoading" busy-text="Removing…">Yes, remove</BusyLabel>
                 </button>
                 <button type="button" class="secondary revoke-btn" @click="cancelRemove" :disabled="removeLoading">Cancel</button>
               </div>
@@ -216,7 +217,7 @@ async function confirmImportSeed() {
                   :disabled="switchingTo !== null"
                   @click="switchTo(acc.seedId, acc.index)"
                 >
-                  {{ isSwitching(acc) ? 'Switching…' : 'Switch' }}
+                  <BusyLabel :busy="isSwitching(acc)" busy-text="Switching…">Switch</BusyLabel>
                 </button>
                 <button type="button" class="secondary revoke-btn" :disabled="switchingTo !== null" @click="startRename(acc)">
                   Rename
@@ -246,7 +247,7 @@ async function confirmImportSeed() {
       </label>
       <p v-if="addAccountError" class="error">{{ addAccountError }}</p>
       <button type="button" @click="confirmAddAccount" :disabled="addAccountLoading">
-        {{ addAccountLoading ? 'Adding…' : 'Add account' }}
+        <BusyLabel :busy="addAccountLoading" busy-text="Adding…">Add account</BusyLabel>
       </button>
       <button type="button" class="secondary" @click="cancelAddAccount" :disabled="addAccountLoading">Cancel</button>
     </template>
@@ -273,7 +274,7 @@ async function confirmImportSeed() {
       </p>
       <p v-if="importError" class="error">{{ importError }}</p>
       <button type="button" @click="confirmImportSeed" :disabled="importLoading">
-        {{ importLoading ? 'Importing…' : 'Import seed phrase' }}
+        <BusyLabel :busy="importLoading" busy-text="Importing…">Import seed phrase</BusyLabel>
       </button>
       <button type="button" class="secondary" @click="cancelImportSeed" :disabled="importLoading">Cancel</button>
     </template>

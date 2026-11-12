@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BusyLabel from './BusyLabel.vue';
 import LoadingHint from './LoadingHint.vue';
 import { computed, onMounted, ref, watch } from 'vue';
 import { useWalletClient } from './wallet-client-key.js';
@@ -364,7 +365,7 @@ async function confirmPayment() {
 
     <template v-if="mode === 'lightning' && lightningQuote">
       <button class="submit-btn" @click="confirmPayment" :disabled="loading">
-        {{ loading ? 'Paying…' : `Pay ${lightningQuote.totalSats.toLocaleString()} sats` }}
+        <BusyLabel :busy="loading" busy-text="Paying…">{{ `Pay ${lightningQuote.totalSats.toLocaleString()} sats` }}</BusyLabel>
       </button>
       <button class="submit-btn secondary" @click="lightningQuote = null" :disabled="loading">Cancel</button>
     </template>
@@ -374,7 +375,7 @@ async function confirmPayment() {
       @click="mode === 'lightning' ? reviewPayment() : send()"
       :disabled="loading || (mode === 'lightning' ? (!lightningInvoice || lightningAvailable !== true) : (!address || !amountSats || coinControlShortfall))"
     >
-      {{ mode === 'lightning' ? (loading ? 'Getting quote…' : 'Review payment') : (loading ? 'Sending…' : 'Send') }}
+      <BusyLabel :busy="loading" :busy-text="mode === 'lightning' ? 'Getting quote…' : 'Sending…'">{{ mode === 'lightning' ? 'Review payment' : 'Send' }}</BusyLabel>
     </button>
 
     <TxList

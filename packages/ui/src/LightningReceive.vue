@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BusyLabel from './BusyLabel.vue';
 import LoadingHint from './LoadingHint.vue';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useWalletClient } from './wallet-client-key.js';
@@ -116,7 +117,7 @@ onUnmounted(stopPolling);
       </label>
       <p v-if="error" class="error">{{ error }}</p>
       <button @click="generate" :disabled="loading || !amountSats">
-        {{ loading ? 'Generating…' : 'Generate Lightning invoice' }}
+        <BusyLabel :busy="loading" busy-text="Generating…">Generate Lightning invoice</BusyLabel>
       </button>
     </template>
     <template v-else>

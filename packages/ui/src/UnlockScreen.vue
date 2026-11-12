@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BusyLabel from './BusyLabel.vue';
 import { ref } from 'vue';
 import { useWalletClient } from './wallet-client-key.js';
 import AppVersion from './AppVersion.vue';
@@ -82,7 +83,7 @@ function onKeydown(e: KeyboardEvent) {
     <p v-if="recoveryDone" class="success-hint">Reset - enter your password and try again.</p>
 
     <button @click="unlock" :disabled="loading || !password">
-      {{ loading ? 'Unlocking…' : 'Unlock' }}
+      <BusyLabel :busy="loading" busy-text="Unlocking…">Unlock</BusyLabel>
     </button>
 
     <template v-if="showRecovery">
@@ -91,7 +92,7 @@ function onKeydown(e: KeyboardEvent) {
         primary account (seed 0) without losing anything - your seed and every account's data stay exactly as they are.
       </p>
       <button type="button" class="secondary" @click="resetToPrimaryAccount" :disabled="recovering">
-        {{ recovering ? 'Resetting…' : 'Reset to primary account' }}
+        <BusyLabel :busy="recovering" busy-text="Resetting…">Reset to primary account</BusyLabel>
       </button>
     </template>
 

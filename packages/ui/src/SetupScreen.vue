@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BusyLabel from './BusyLabel.vue';
 import { ref } from 'vue';
 import { useWalletClient } from './wallet-client-key.js';
 import { useCopyToClipboard } from './composables/useCopyToClipboard.js';
@@ -125,7 +126,7 @@ async function submitRestore() {
       <p v-if="error" class="error">{{ error }}</p>
 
       <button @click="submitPassword" :disabled="loading">
-        {{ loading ? 'Creating…' : 'Create wallet' }}
+        <BusyLabel :busy="loading" busy-text="Creating…">Create wallet</BusyLabel>
       </button>
     </template>
 
@@ -152,7 +153,7 @@ async function submitRestore() {
       <p v-if="error" class="error">{{ error }}</p>
 
       <button @click="finishCreate" :disabled="loading">
-        {{ loading ? 'Finishing…' : 'Next' }}
+        <BusyLabel :busy="loading" busy-text="Finishing…">Next</BusyLabel>
       </button>
     </template>
 
@@ -180,7 +181,7 @@ async function submitRestore() {
       <p v-if="error" class="error">{{ error }}</p>
 
       <button @click="submitRestore" :disabled="loading">
-        {{ loading ? 'Restoring…' : 'Restore wallet' }}
+        <BusyLabel :busy="loading" busy-text="Restoring…">Restore wallet</BusyLabel>
       </button>
     </template>
 

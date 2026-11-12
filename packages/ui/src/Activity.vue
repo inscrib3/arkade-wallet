@@ -5,6 +5,7 @@ import { useWalletClient } from './wallet-client-key.js';
 import { useNetworkInfo, useAssets } from './composables/useWalletState.js';
 import { getArkadeExplorerTxUrl, getMempoolTxUrl, type TxHistoryEntry } from '@inscrib3/core';
 import Icon from './Icon.vue';
+import BusyLabel from './BusyLabel.vue';
 import TxStatusBadge from './TxStatusBadge.vue';
 import ToggleGroup, { type ToggleOption } from './ToggleGroup.vue';
 
@@ -188,8 +189,7 @@ onUnmounted(stopPolling);
     </div>
 
     <button v-if="!embedded" class="refresh" @click="refresh()" :disabled="loading">
-      <Icon name="refresh" :size="14" />
-      {{ loading ? 'Refreshing…' : 'Refresh' }}
+      <BusyLabel :busy="loading" busy-text="Refreshing…"><Icon name="refresh" :size="14" /> Refresh</BusyLabel>
     </button>
   </div>
 </template>

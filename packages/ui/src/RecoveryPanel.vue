@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BusyLabel from './BusyLabel.vue';
 import { computed, onMounted, ref } from 'vue';
 import { useWalletClient } from './wallet-client-key.js';
 import { getMempoolTxUrl, type ExitQuote, type ExecutorEvent } from '@inscrib3/core';
@@ -152,7 +153,7 @@ onMounted(async () => {
       </label>
       <p v-if="quoteError" class="error">{{ quoteError }}</p>
       <button @click="getQuote" :disabled="quoteLoading || !sweepAddress">
-        {{ quoteLoading ? 'Getting quote…' : 'Get quote' }}
+        <BusyLabel :busy="quoteLoading" busy-text="Getting quote…">Get quote</BusyLabel>
       </button>
     </template>
 
@@ -167,7 +168,7 @@ onMounted(async () => {
       </p>
       <p class="mono-box">{{ feeAddress }}</p>
       <p v-if="startError" class="error">{{ startError }}</p>
-      <button @click="startRecovery" :disabled="starting">{{ starting ? 'Starting…' : 'Start recovery' }}</button>
+      <button @click="startRecovery" :disabled="starting"><BusyLabel :busy="starting" busy-text="Starting…">Start recovery</BusyLabel></button>
       <button type="button" class="secondary" @click="backToIdle" :disabled="starting">Back</button>
     </template>
 
@@ -191,7 +192,7 @@ onMounted(async () => {
           <span v-else-if="event.txid" class="log-txid">{{ shortTxid(event.txid) }}</span>
         </div>
       </div>
-      <button @click="checkProgress" :disabled="checking">{{ checking ? 'Checking…' : 'Check for progress' }}</button>
+      <button @click="checkProgress" :disabled="checking"><BusyLabel :busy="checking" busy-text="Checking…">Check for progress</BusyLabel></button>
     </template>
 
     <template v-else-if="phase === 'done'">

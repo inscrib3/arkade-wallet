@@ -20,7 +20,7 @@ type Section = 'home' | 'activity' | 'settings';
 // A send's asset is SendView's key: 'btc' or 'ark:<assetId>'.
 type Screen =
   | { kind: 'home' }
-  | { kind: 'send'; asset: string }
+  | { kind: 'send'; asset: string; knownAsset?: AssetEntry }
   | { kind: 'receive' }
   | { kind: 'create-asset' }
   | { kind: 'ark-asset'; asset: AssetEntry };
@@ -33,8 +33,15 @@ function goHome() {
   screen.value = { kind: 'home' };
 }
 
-function openSend(asset: string) {
-  screen.value = { kind: 'send', asset };
+function openSend(asset: string, knownAsset?: AssetEntry) {
+  screen.value = { kind: 'send', asset, knownAsset };
+}
+
+// Only the token page passes a knownAsset, so Back returns there; the token
+// page re-reads its balance on mount.
+function backFromSend(sendScreen: Extract<Screen, { kind: 'send' }>) {
+  if (sendScreen.knownAsset) screen.value = { kind: 'ark-asset', asset: sendScreen.knownAsset };
+  else goHome();
 }
 
 const client = useWalletClient();
@@ -116,9 +123,9 @@ async function lock() {
 
         <template v-if="section === 'home'">
           <div v-if="screen.kind === 'send'" class="screen">
-            <button type="button" class="back" @click="goHome"><Icon name="arrow-left" :size="14" /> Back</button>
+            <button type="button" class="back" @click="backFromSend(screen)"><Icon name="arrow-left" :size="14" /> Back</button>
             <h2>Send</h2>
-            <SendView :initial-asset="screen.asset" />
+            <SendView :initial-asset="screen.asset" :known-asset="screen.knownAsset" />
           </div>
 
           <div v-else-if="screen.kind === 'receive'" class="screen">
@@ -132,7 +139,7 @@ async function lock() {
             :key="dataKey"
             :asset="screen.asset"
             @back="goHome"
-            @send="openSend(`ark:${screen.asset.assetId}`)"
+            @send="(asset) => openSend(`ark:${asset.assetId}`, asset)"
           />
 
           <div v-else-if="screen.kind === 'create-asset'" class="screen">

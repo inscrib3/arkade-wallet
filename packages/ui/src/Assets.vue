@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BusyLabel from './BusyLabel.vue';
 import LoadingHint from './LoadingHint.vue';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useWalletClient } from './wallet-client-key.js';
@@ -12,13 +13,14 @@ import {
 import Icon from './Icon.vue';
 import TxStatusBadge from './TxStatusBadge.vue';
 import { formatAssetAmount, parseAssetAmount, rawToDecimalString } from './format.js';
+import { recheckUntil } from './recheck.js';
 
 type TxEntry = TxHistoryEntry;
 
 // One Ark asset's detail screen, opened from its home row with the asset
 // already known. Sending goes through the shared Send screen.
 const props = defineProps<{ asset: AssetEntry }>();
-const emit = defineEmits<{ back: []; send: [] }>();
+const emit = defineEmits<{ back: []; send: [asset: AssetEntry] }>();
 
 // The full list, needed to tell whether this wallet holds the control asset.
 const assets = ref<AssetEntry[]>([]);
@@ -32,6 +34,7 @@ const operationConfirmed = ref(false);
 const operationLoading = ref(false);
 const operationError = ref('');
 const operationTxid = ref('');
+const balanceUpdating = ref(false);
 
 const { network, refresh: refreshNetwork } = useNetworkInfo();
 const client = useWalletClient();
@@ -46,6 +49,7 @@ function txExplorerUrl(txid: string): string | null {
 }
 
 const decimals = computed(() => selected.value?.metadata?.decimals ?? 0);
+const hasBalance = computed(() => (selected.value?.amount ?? 0) > 0);
 const canReissue = computed(() => {
   const controlAssetId = selected.value?.controlAssetId;
   return !!controlAssetId && assets.value.some((asset) => asset.assetId === controlAssetId && asset.amount > 0);
@@ -96,6 +100,7 @@ function assetTxLabel(tx: TxEntry): string {
 
 const ASSET_TX_POLL_INTERVAL_MS = 20_000;
 let assetTxPollHandle: ReturnType<typeof setInterval> | null = null;
+let isUnmounted = false;
 
 function stopAssetTxPolling() {
   if (assetTxPollHandle) {
@@ -106,14 +111,7 @@ function stopAssetTxPolling() {
 
 function startAssetTxPolling() {
   stopAssetTxPolling();
-  assetTxPollHandle = setInterval(async () => {
-    if (!selected.value) return;
-    try {
-      assetTxs.value = await client.getAssetTransactionHistory(selected.value.assetId);
-    } catch {
-      // transient poll error - retry next tick
-    }
-  }, ASSET_TX_POLL_INTERVAL_MS);
+  assetTxPollHandle = setInterval(refreshSelectedAsset, ASSET_TX_POLL_INTERVAL_MS);
 }
 
 function openOperation(next: 'reissue' | 'burn') {
@@ -137,7 +135,16 @@ function setOperationMax() {
 
 // Both fetched at once: waiting for one before the other doubled the wait.
 // A failed fetch keeps what is already on screen.
-async function refreshSelectedAsset() {
+// A refresh already running is joined, not repeated: the 20 s poll and the
+// post-burn re-read would otherwise stack slow indexer syncs on each other.
+let refreshInFlight: Promise<void> | null = null;
+
+function refreshSelectedAsset(): Promise<void> {
+  refreshInFlight ??= fetchSelectedAsset().finally(() => { refreshInFlight = null; });
+  return refreshInFlight;
+}
+
+async function fetchSelectedAsset() {
   if (!selected.value) return;
   const current = selected.value;
   const [freshAssets, freshTxs] = await Promise.all([
@@ -149,6 +156,21 @@ async function refreshSelectedAsset() {
     selected.value = freshAssets.find((asset) => asset.assetId === current.assetId) ?? { ...current, amount: 0, displayAmount: 0 };
   }
   if (freshTxs) assetTxs.value = freshTxs;
+}
+
+async function waitForBalance(expectedAmount: number) {
+  balanceUpdating.value = true;
+  try {
+    await recheckUntil(
+      async () => {
+        await refreshSelectedAsset();
+        return selected.value?.amount === expectedAmount;
+      },
+      { isCancelled: () => isUnmounted },
+    );
+  } finally {
+    balanceUpdating.value = false;
+  }
 }
 
 async function submitOperation() {
@@ -176,12 +198,14 @@ async function submitOperation() {
   operationLoading.value = true;
   try {
     const input = { assetId: selected.value.assetId, amount: rawAmount };
+    const balanceChange = operation.value === 'reissue' ? rawAmount : -rawAmount;
+    const expectedAmount = selected.value.amount + balanceChange;
     operationTxid.value = operation.value === 'reissue'
       ? await client.reissueAsset(input)
       : await client.burnAsset(input);
     operationAmount.value = '';
     operationConfirmed.value = false;
-    await refreshSelectedAsset();
+    void waitForBalance(expectedAmount);
   } catch (e: unknown) {
     operationError.value = String(e);
   } finally {
@@ -194,7 +218,10 @@ function backToHome() {
   emit('back');
 }
 
-onUnmounted(stopAssetTxPolling);
+onUnmounted(() => {
+  isUnmounted = true;
+  stopAssetTxPolling();
+});
 
 // Shows what the wallet already has from this session, then refreshes.
 onMounted(async () => {
@@ -225,12 +252,13 @@ onMounted(async () => {
       <div class="balance-box">
         <span class="balance-amount">{{ formatAssetAmount(selected) }}</span>
         <span class="balance-raw">{{ selected.amount.toLocaleString() }} raw units · {{ decimals }} decimals</span>
+        <LoadingHint v-if="balanceUpdating" label="Updating balance…" />
       </div>
 
       <div class="asset-actions">
-        <button class="submit-btn" @click="stopAssetTxPolling(); emit('send')">Send</button>
+        <button class="submit-btn" :disabled="!hasBalance" @click="stopAssetTxPolling(); emit('send', selected)">Send</button>
         <button v-if="canReissue" class="secondary-btn" @click="openOperation('reissue')">Reissue</button>
-        <button class="danger-btn" @click="openOperation('burn')">Burn</button>
+        <button class="danger-btn" :disabled="!hasBalance" @click="openOperation('burn')">Burn</button>
       </div>
 
       <div v-if="operation" class="operation-panel" :class="{ danger: operation === 'burn' }">
@@ -267,7 +295,7 @@ onMounted(async () => {
           :class="operation === 'burn' ? 'danger-submit' : 'submit-btn'"
           :disabled="operationLoading || !operationAmount || (operation === 'burn' && !operationConfirmed)"
           @click="submitOperation"
-        >{{ operationLoading ? 'Submitting…' : operation === 'reissue' ? 'Confirm reissuance' : 'Permanently burn' }}</button>
+        ><BusyLabel :busy="operationLoading" busy-text="Submitting…">{{ operation === 'reissue' ? 'Confirm reissuance' : 'Permanently burn' }}</BusyLabel></button>
       </div>
 
       <div class="detail-section">
@@ -353,6 +381,7 @@ button.submit-btn {
 }
 .asset-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 8px; }
 .asset-actions .submit-btn { grid-column: auto; }
+.asset-actions button:disabled { cursor: not-allowed; opacity: 0.5; }
 .secondary-btn, .danger-btn, .danger-submit {
   border-radius: 8px;
   cursor: pointer;

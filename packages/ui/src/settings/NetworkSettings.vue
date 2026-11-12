@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BusyLabel from '../BusyLabel.vue';
 import { computed, onMounted, ref } from 'vue';
 import { NETWORK_PRESETS, type NetworkPreset } from '@inscrib3/core';
 import { useWalletClient } from '../wallet-client-key.js';
@@ -93,7 +94,7 @@ async function saveNetwork() {
         Saved and reconnected.
       </p>
       <button @click="saveNetwork" :disabled="networkSaving">
-        {{ networkSaving ? 'Saving…' : 'Save network settings' }}
+        <BusyLabel :busy="networkSaving" busy-text="Saving…">Save network settings</BusyLabel>
       </button>
     </template>
 

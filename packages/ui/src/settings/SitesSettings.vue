@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BusyLabel from '../BusyLabel.vue';
 import { onMounted, ref } from 'vue';
 import { useWalletClient } from '../wallet-client-key.js';
 
@@ -54,7 +55,7 @@ onMounted(loadConnectedOrigins);
           :disabled="revokingOrigin === origin"
           @click="revokeConnectedOrigin(origin)"
         >
-          {{ revokingOrigin === origin ? 'Revoking…' : 'Revoke' }}
+          <BusyLabel :busy="revokingOrigin === origin" busy-text="Revoking…">Revoke</BusyLabel>
         </button>
       </div>
     </div>

@@ -1,14 +1,19 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import BusyLabel from './BusyLabel.vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useWalletClient } from './wallet-client-key.js';
 import { useNetworkInfo } from './composables/useWalletState.js';
 import { getArkadeExplorerTxUrl, type AssetEntry } from '@inscrib3/core';
 import { formatAssetAmount, parseAssetAmount, rawToDecimalString } from './format.js';
 import { coinKey, useCoinControl } from './composables/useCoinControl.js';
 import CoinControlPanel from './CoinControlPanel.vue';
+import LoadingHint from './LoadingHint.vue';
+import { recheckUntil } from './recheck.js';
 
 // Sends one Ark asset to an Ark address; the recipient comes from SendView.
 const props = defineProps<{ asset: AssetEntry; recipient: string }>();
+// The fresh asset list after a send, so the asset picker above shows it too.
+const emit = defineEmits<{ assetsUpdated: [assets: AssetEntry[]] }>();
 
 const client = useWalletClient();
 const { network, refresh: refreshNetwork } = useNetworkInfo();
@@ -20,6 +25,9 @@ const amountDisplay = ref('');
 const loading = ref(false);
 const error = ref('');
 const txid = ref('');
+const balanceUpdating = ref(false);
+let isUnmounted = false;
+onUnmounted(() => { isUnmounted = true; });
 
 const decimals = computed(() => current.value.metadata?.decimals ?? 0);
 const ticker = computed(() => current.value.metadata?.ticker ?? `${current.value.assetId.slice(0, 8)}…`);
@@ -45,6 +53,25 @@ function setMax() {
   amountDisplay.value = rawToDecimalString(current.value.amount, decimals.value);
 }
 
+// An asset sent in full drops out of getAssets, so missing reads as zero.
+async function waitForBalance(expectedAmount: number) {
+  balanceUpdating.value = true;
+  try {
+    await recheckUntil(
+      async () => {
+        const assets = await client.getAssets().catch(() => null);
+        if (!assets) return false;
+        emit('assetsUpdated', assets);
+        current.value = assets.find((a) => a.assetId === current.value.assetId) ?? { ...current.value, amount: 0, displayAmount: 0 };
+        return current.value.amount === expectedAmount;
+      },
+      { isCancelled: () => isUnmounted },
+    );
+  } finally {
+    balanceUpdating.value = false;
+  }
+}
+
 async function submit() {
   error.value = '';
   txid.value = '';
@@ -65,8 +92,7 @@ async function submit() {
     );
     amountDisplay.value = '';
     resetCoinControl();
-    const updated = (await client.getAssets()).find((a) => a.assetId === current.value.assetId);
-    if (updated) current.value = updated;
+    void waitForBalance(current.value.amount - rawAmount);
   } catch (e: unknown) {
     const msg = String(e);
     if (msg.includes('SELECTED_VTXOS_NO_LONGER_SPENDABLE')) {
@@ -94,6 +120,7 @@ async function submit() {
       Balance: {{ formatAssetAmount(current) }} {{ ticker }}
       <template v-if="amountRawPreview !== null"> · = {{ amountRawPreview.toLocaleString() }} raw unit{{ amountRawPreview === 1 ? '' : 's' }}</template>
     </p>
+    <LoadingHint v-if="balanceUpdating" label="Updating balance…" />
 
     <CoinControlPanel
       v-if="client.getSpendableVtxos"
@@ -122,7 +149,7 @@ async function submit() {
     </div>
 
     <button class="submit-btn" @click="submit" :disabled="loading || !recipient || !amountDisplay">
-      {{ loading ? 'Sending…' : 'Send' }}
+      <BusyLabel :busy="loading" busy-text="Sending…">Send</BusyLabel>
     </button>
   </div>
 </template>

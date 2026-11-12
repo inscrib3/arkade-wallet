@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BusyLabel from './BusyLabel.vue';
 import LoadingHint from './LoadingHint.vue';
 import { computed, onActivated, onDeactivated, onMounted, onUnmounted, ref } from 'vue';
 import { useWalletBalance, useBtcPrice, useNetworkInfo, useWalletAddresses } from './composables/useWalletState.js';
@@ -404,7 +405,7 @@ onActivated(() => {
             <!-- While renewal is needed the banner above holds the only button;
                  during a run the banner hides and this one shows progress. -->
             <button v-if="!needsRenewal || settling" type="button" class="settle-btn" @click="settleNow" :disabled="settling">
-              {{ settling ? 'Settling…' : 'Settle now' }}
+              <BusyLabel :busy="settling" busy-text="Settling…">Settle now</BusyLabel>
             </button>
             <div v-if="settling && settleLog.length > 0" class="log">
               <div class="log-row" v-for="(event, i) in settleLog" :key="i">
@@ -425,8 +426,7 @@ onActivated(() => {
     <p v-else class="hint">No balance data</p>
 
     <button class="refresh" @click="refreshAll" :disabled="loading">
-      <Icon name="refresh" :size="14" />
-      {{ loading ? 'Refreshing…' : 'Refresh' }}
+      <BusyLabel :busy="loading" busy-text="Refreshing…"><Icon name="refresh" :size="14" /> Refresh</BusyLabel>
     </button>
   </div>
 </template>

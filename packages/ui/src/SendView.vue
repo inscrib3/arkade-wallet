@@ -11,18 +11,28 @@ import { formatAssetAmount } from './format.js';
 
 // One Send screen for everything: pick what to send, paste where, and the
 // recipient decides the route. Asset keys: 'btc', 'ark:<assetId>'.
-const props = defineProps<{ initialAsset?: string }>();
+// knownAsset: the entry the asset page already shows, so the picker has it
+// at once instead of waiting for a fetch.
+const props = defineProps<{ initialAsset?: string; knownAsset?: AssetEntry }>();
 
 const client = useWalletClient();
 const { balance, refresh: refreshBalance } = useWalletBalance();
-const arkAssets = ref<AssetEntry[]>([]);
+const arkAssets = ref<AssetEntry[]>(props.knownAsset ? [props.knownAsset] : []);
 
 const asset = ref(props.initialAsset ?? 'btc');
 const recipient = ref('');
 
-onMounted(() => {
+// The assets the wallet already loaded show at once; the fresh list replaces
+// them when its indexer sync finishes.
+onMounted(async () => {
   void refreshBalance();
-  client.getAssets().then((a) => (arkAssets.value = a), () => {});
+  let freshArrived = false;
+  client.getAssets().then((a) => {
+    freshArrived = true;
+    arkAssets.value = a;
+  }, () => {});
+  const cached = await client.getCachedOverview?.().catch(() => null);
+  if (cached?.assets && !freshArrived) arkAssets.value = withKnownAsset(cached.assets);
 });
 
 // Boarding funds can't be spent from Send until they settle into Ark.
@@ -38,6 +48,24 @@ const assetOptions = computed<AssetPickerOption<string>[]>(() => [
     iconUrl: a.metadata?.icon,
   })),
 ]);
+
+// The asset page's entry is newer than the cached list, so it wins until
+// the fresh fetch arrives.
+function withKnownAsset(assets: AssetEntry[]): AssetEntry[] {
+  const known = props.knownAsset;
+  if (!known) return assets;
+  const listed = assets.some((a) => a.assetId === known.assetId);
+  return listed ? assets.map((a) => (a.assetId === known.assetId ? known : a)) : [known, ...assets];
+}
+
+// An asset just sent in full is no longer listed; it stays in the picker at
+// zero so its send form (and the success message) doesn't vanish.
+function updateArkAssets(fresh: AssetEntry[]) {
+  const sentInFull = selectedArkAsset.value && !fresh.some((a) => a.assetId === selectedArkAsset.value?.assetId)
+    ? [{ ...selectedArkAsset.value, amount: 0, displayAmount: 0 }]
+    : [];
+  arkAssets.value = [...fresh, ...sentInFull];
+}
 
 const selectedArkAsset = computed(() =>
   asset.value.startsWith('ark:') ? arkAssets.value.find((a) => `ark:${a.assetId}` === asset.value) ?? null : null,
@@ -92,7 +120,13 @@ const route = computed<Route | null>(() => {
 
     <p v-if="route?.form === 'error'" class="hint warning">{{ route.message }}</p>
     <SendForm v-else-if="route?.form === 'arkade'" :recipient="recipient" />
-    <ArkAssetSendForm v-else-if="route?.form === 'ark-asset'" :key="route.asset.assetId" :asset="route.asset" :recipient="route.target" />
+    <ArkAssetSendForm
+      v-else-if="route?.form === 'ark-asset'"
+      :key="route.asset.assetId"
+      :asset="route.asset"
+      :recipient="route.target"
+      @assets-updated="updateArkAssets"
+    />
   </div>
 </template>
 

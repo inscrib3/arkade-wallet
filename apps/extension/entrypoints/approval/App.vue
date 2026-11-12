@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue';
-import { ApprovalRequestBody, UnlockScreen, useWalletClient } from '@inscrib3/ui';
+import { ApprovalRequestBody, BusyLabel, UnlockScreen, useWalletClient } from '@inscrib3/ui';
 import { sendToBackground } from '../../src/lib/messaging/popup-client.js';
 
 type RequestType =
@@ -33,6 +33,7 @@ const targetNetwork = ref('');
 const issuance = ref<{ amount: number; controlAssetId?: string; metadata?: { name?: string; ticker?: string; decimals?: number; icon?: string } } | null>(null);
 const assetOperation = ref<{ assetId: string; amount: number } | null>(null);
 const loading = ref(false);
+const approving = ref(false);
 const error = ref('');
 // Approve stays disabled briefly after the window opens, so a click meant for
 // the page underneath can't land on it.
@@ -89,6 +90,7 @@ function closeWindow() {
 
 async function respond(approved: boolean) {
   loading.value = true;
+  approving.value = approved;
   error.value = '';
   try {
     const approvalId = new URLSearchParams(window.location.search).get('id') ?? '';
@@ -211,8 +213,8 @@ async function respond(approved: boolean) {
     <p v-if="error" class="description warning">{{ error }}</p>
 
     <div class="actions">
-      <button class="btn-reject" :disabled="loading" @click="respond(false)">Reject</button>
-      <button class="btn-approve" :disabled="loading || !armed" @click="respond(true)">Approve</button>
+      <button class="btn-reject" :disabled="loading" @click="respond(false)"><BusyLabel :busy="loading && !approving" busy-text="Rejecting…">Reject</BusyLabel></button>
+      <button class="btn-approve" :disabled="loading || !armed" @click="respond(true)"><BusyLabel :busy="loading && approving" busy-text="Approving…">Approve</BusyLabel></button>
     </div>
   </div>
 </template>

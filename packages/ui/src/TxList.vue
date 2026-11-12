@@ -5,6 +5,7 @@ import { useWalletClient } from './wallet-client-key.js';
 import { useNetworkInfo, useAssets } from './composables/useWalletState.js';
 import { getArkadeExplorerTxUrl, getMempoolTxUrl, type TxHistoryEntry } from '@inscrib3/core';
 import Icon from './Icon.vue';
+import BusyLabel from './BusyLabel.vue';
 import TxStatusBadge from './TxStatusBadge.vue';
 
 // Ark layers only: 'onchain' is Ark's boarding address - see
@@ -119,8 +120,7 @@ defineExpose({ refresh });
     </div>
 
     <button type="button" class="refresh" @click="refresh" :disabled="loading">
-      <Icon name="refresh" :size="14" />
-      {{ loading ? 'Refreshing…' : 'Refresh' }}
+      <BusyLabel :busy="loading" busy-text="Refreshing…"><Icon name="refresh" :size="14" /> Refresh</BusyLabel>
     </button>
   </div>
 </template>
