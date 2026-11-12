@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
-import { ApprovalRequestBody } from '@inscrib3/ui';
+import { onMounted, onUnmounted, ref } from 'vue';
+import { ApprovalRequestBody, UnlockScreen, useWalletClient } from '@inscrib3/ui';
 import { sendToBackground } from '../../src/lib/messaging/popup-client.js';
 
 type RequestType =
@@ -12,6 +12,8 @@ type RequestType =
   | 'burnAsset'
   | 'settle'
   | 'signMessage'
+  | 'unlock'
+  | 'switchNetwork'
   | 'unknown';
 
 interface AssetLine {
@@ -27,6 +29,7 @@ const assets = ref<AssetLine[]>([]);
 const message = ref('');
 const network = ref('');
 const account = ref('');
+const targetNetwork = ref('');
 const issuance = ref<{ amount: number; controlAssetId?: string; metadata?: { name?: string; ticker?: string; decimals?: number; icon?: string } } | null>(null);
 const assetOperation = ref<{ assetId: string; amount: number } | null>(null);
 const loading = ref(false);
@@ -35,6 +38,14 @@ const error = ref('');
 // the page underneath can't land on it.
 const APPROVE_DELAY_MS = 1000;
 const armed = ref(false);
+
+// The background waits for the unlock itself, so this window only has to go
+// away once the wallet is unlocked, here or from the main popup.
+const client = useWalletClient();
+const stopListening = client.onEvent((event) => {
+  if (event === 'unlock' && requestType.value === 'unlock') window.close();
+});
+onUnmounted(stopListening);
 
 // Shows a malformed param as '—' instead of crashing the popup.
 function sats(n: unknown): string {
@@ -52,6 +63,7 @@ onMounted(() => {
   message.value = params.get('message') ?? '';
   network.value = params.get('network') ?? '';
   account.value = params.get('account') ?? '';
+  targetNetwork.value = params.get('targetNetwork') ?? '';
 
   const assetsParam = params.get('assets');
   if (assetsParam) {
@@ -71,6 +83,10 @@ onMounted(() => {
   }
 });
 
+function closeWindow() {
+  window.close();
+}
+
 async function respond(approved: boolean) {
   loading.value = true;
   error.value = '';
@@ -87,7 +103,16 @@ async function respond(approved: boolean) {
 </script>
 
 <template>
-  <div class="approval">
+  <div v-if="requestType === 'unlock'" class="approval unlock-step">
+    <div class="origin-badge">{{ origin || 'Unknown origin' }}</div>
+    <p class="description">This site sent a request. Unlock Inscrib3 Wallet to review it.</p>
+    <UnlockScreen @unlocked="closeWindow" />
+    <div class="actions">
+      <button class="btn-reject" @click="closeWindow">Cancel</button>
+    </div>
+  </div>
+
+  <div v-else class="approval">
     <div class="origin-badge">{{ origin || 'Unknown origin' }}</div>
     <div v-if="network || account" class="wallet-context" :class="{ mainnet: network === 'Mainnet' }">
       {{ network }}<template v-if="network && account"> · </template>{{ account }}
@@ -158,6 +183,18 @@ async function respond(approved: boolean) {
       <p v-else class="description warning">This permanently destroys the specified amount and broadcasts a real transaction. Burned units cannot be recovered.</p>
     </template>
 
+    <template v-else-if="requestType === 'switchNetwork'">
+      <h1>Switch network?</h1>
+      <div class="tx-details">
+        <div class="row"><span class="label">From</span><span class="value">{{ network || '—' }}</span></div>
+        <div class="row"><span class="label">To</span><span class="value">{{ targetNetwork || '—' }}</span></div>
+      </div>
+      <p class="description">
+        No funds move. The wallet reconnects to the {{ targetNetwork || 'selected' }} server, and every
+        connected site sees the new network and address.
+      </p>
+    </template>
+
     <template v-else-if="requestType === 'settle'">
       <h1>Settle virtual outputs?</h1>
       <p class="description">
@@ -191,6 +228,8 @@ async function respond(approved: boolean) {
   white-space: pre-wrap;
   word-break: break-word;
 }
+.unlock-step { gap: 0; }
+.unlock-step .description { text-align: center; margin-top: 8px; }
 .approval {
   padding: 28px 24px;
   display: flex;

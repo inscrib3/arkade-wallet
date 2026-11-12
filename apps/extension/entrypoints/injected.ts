@@ -162,6 +162,10 @@ export default defineUnlistedScript(() => {
     signMessage(message: string): Promise<{ message: string; signature: string; address: string }> {
       return request('arkade_signMessage', { message });
     },
+    // 'bitcoin' or 'mutinynet'. Asks the user to approve unless already there.
+    switchNetwork(network: string): Promise<boolean> {
+      return request('arkade_switchNetwork', { network });
+    },
 
     // Events: 'accountsChanged' | 'accountChanged' | 'networkChanged' | 'lock' | 'unlock'
     on(eventName: string, callback: (data?: unknown) => void): void {

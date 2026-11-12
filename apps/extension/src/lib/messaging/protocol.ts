@@ -20,6 +20,7 @@ export const RPC_METHODS = [
   'arkade_burnAsset',
   'arkade_settle',
   'arkade_signMessage',
+  'arkade_switchNetwork',
 ] as const;
 export type RpcMethod = (typeof RPC_METHODS)[number];
 const RPC_METHOD_SET: ReadonlySet<string> = new Set(RPC_METHODS);

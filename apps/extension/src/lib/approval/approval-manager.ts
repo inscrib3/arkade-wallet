@@ -10,7 +10,11 @@ export type ApprovalType =
   | 'reissueAsset'
   | 'burnAsset'
   | 'settle'
-  | 'signMessage';
+  | 'signMessage'
+  // Not a request to approve: the window only unlocks the wallet so the
+  // request that opened it can continue in its own approval window.
+  | 'unlock'
+  | 'switchNetwork';
 
 export interface ApprovalRequest {
   type: ApprovalType;
@@ -21,6 +25,8 @@ export interface ApprovalRequest {
   message?: string;
   issuance?: { amount: number; controlAssetId?: string; metadata?: { name?: string; ticker?: string; decimals?: number; icon?: string } };
   assetOperation?: { assetId: string; amount: number };
+  // Display name of the network a switchNetwork request moves to.
+  targetNetwork?: string;
   // Which wallet would act, so mainnet and testnet requests look different.
   network?: string;
   account?: string;
@@ -42,6 +48,13 @@ export function nextApprovalId(): string {
 // Limits stacked popups from a spammy app (approval fatigue).
 const MAX_PENDING_APPROVALS_PER_ORIGIN = 3;
 
+// Its own error so the site learns why, instead of a plain "rejected".
+export class TooManyApprovalsError extends Error {
+  constructor() {
+    super('Too many Inscrib3 Wallet requests are already open for this site. Answer or close them, then try again.');
+  }
+}
+
 // Counted before any await; counting `pending` would let concurrent calls
 // all pass the cap.
 const pendingCountByOrigin = new Map<string, number>();
@@ -61,7 +74,7 @@ function decrementPendingCount(origin: string): void {
 export async function requestApproval(approvalId: string, req: ApprovalRequest): Promise<boolean> {
   if (incrementPendingCount(req.origin) > MAX_PENDING_APPROVALS_PER_ORIGIN) {
     decrementPendingCount(req.origin);
-    return false;
+    throw new TooManyApprovalsError();
   }
 
   const params = new URLSearchParams({ id: approvalId, type: req.type, origin: req.origin });
@@ -73,6 +86,7 @@ export async function requestApproval(approvalId: string, req: ApprovalRequest):
   if (req.assetOperation) params.set('assetOperation', JSON.stringify(req.assetOperation));
   if (req.network) params.set('network', req.network);
   if (req.account) params.set('account', req.account);
+  if (req.targetNetwork) params.set('targetNetwork', req.targetNetwork);
 
   let windowId: number | undefined;
   try {

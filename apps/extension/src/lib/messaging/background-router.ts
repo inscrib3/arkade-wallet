@@ -1,7 +1,7 @@
-import { loadNetworkSettings, saveNetworkSettings, describeNetwork, fetchConnectionInfo, type WalletManager, type NetworkSettings, type KeyValueStore, type VtxoOutpoint, type CachedWalletOverview } from '@inscrib3/core';
+import { loadNetworkSettings, saveNetworkSettings, describeNetwork, fetchConnectionInfo, NETWORK_PRESETS, type NetworkPreset, type WalletManager, type NetworkSettings, type KeyValueStore, type VtxoOutpoint, type CachedWalletOverview } from '@inscrib3/core';
 import { isInternalMethod, isInternalSender, isRpcMethod, type AnyRequest, type InternalResponse } from './protocol.js';
 import { connect, isConnected, getConnectedOrigins, revoke } from '../permissions/origin-permissions.js';
-import { nextApprovalId, requestApproval, resolveApproval, type ApprovalRequest } from '../approval/approval-manager.js';
+import { nextApprovalId, requestApproval, resolveApproval, TooManyApprovalsError, type ApprovalRequest } from '../approval/approval-manager.js';
 import { savePendingRequest, loadPendingRequest, clearPendingRequest } from '../approval/approval-persistence.js';
 import { broadcastEvent, notifyUi } from './broadcast.js';
 import { encodeBigints, decodeBigints } from './bigint-wire.js';
@@ -21,7 +21,18 @@ function err(id: string, message: string): InternalResponse {
 // be blind-signing.
 const MAX_SIGNABLE_MESSAGE_LENGTH = 1024;
 
-const WALLET_LOCKED_FOR_APPROVAL = 'Wallet is locked. Open the extension, unlock it, then try again.';
+const WALLET_LOCKED_FOR_APPROVAL = 'Wallet is locked. Unlock Inscrib3 Wallet, then try again.';
+
+function serverUnreachableAfterSave(detail: string): string {
+  return `Saved, but the new server couldn't be reached - unlock to try again. ${detail}`;
+}
+
+// Presets only: a site may move the wallet between known networks, never to a
+// server URL of its choosing.
+function findNetworkPreset(params: unknown): NetworkPreset | undefined {
+  const network = (params as { network?: unknown } | undefined)?.network;
+  return NETWORK_PRESETS.find((preset) => preset.network === network);
+}
 
 const WALLET_CHANGED_DURING_APPROVAL =
   'The active account or network changed while this request was open, so nothing was done. Ask the site to try again.';
@@ -36,6 +47,8 @@ const OPEN_RPC_METHODS: ReadonlySet<string> = new Set([
 
 export class BackgroundRouter {
   private readonly overviewCache = new OverviewCache();
+  // One unlock window serves every request that arrives while locked.
+  private unlockWindow: { approvalId: string; unlocked: Promise<boolean> } | null = null;
 
   constructor(private readonly manager: WalletManager, private readonly store: KeyValueStore) {
     this.manager.onIncomingFunds((funds) => {
@@ -55,7 +68,7 @@ export class BackgroundRouter {
         const request = internal ? { ...msg, params: decodeBigints(msg.params) } : msg;
         this._handle(request as AnyRequest, sender)
           .then((response) => sendResponse(internal ? encodeBigints(response) : response))
-          .catch((e: unknown) => sendResponse(err(msg.id, String(e))));
+          .catch((e: unknown) => sendResponse(err(msg.id, e instanceof TooManyApprovalsError ? e.message : String(e))));
         return true; // keep channel open for async response
       },
     );
@@ -91,13 +104,54 @@ export class BackgroundRouter {
     params: unknown,
     rejectedMessage: string,
   ): Promise<InternalResponse> {
-    // The popup has no unlock step, so an approval opened now could only fail.
-    if (!this.manager.isUnlocked()) return err(id, WALLET_LOCKED_FOR_APPROVAL);
+    // The wallet key is read after unlocking: the approval must name the
+    // wallet that will actually act.
+    if (!(await this._waitForUnlock(req.origin))) return err(id, WALLET_LOCKED_FOR_APPROVAL);
     const walletKey = await this._activeWalletKey();
     const approved = await this._requestApprovalPersisted(nextApprovalId(), req, method, params, walletKey);
     if (!approved) return err(id, rejectedMessage);
     if (walletKey !== (await this._activeWalletKey())) return err(id, WALLET_CHANGED_DURING_APPROVAL);
     return ok(id, await this._performApprovedAction(method, params, req.origin));
+  }
+
+  // Resolves true once unlocked, false if the unlock window was closed first.
+  private _waitForUnlock(origin: string): Promise<boolean> {
+    if (this.manager.isUnlocked()) return Promise.resolve(true);
+    if (!this.unlockWindow) {
+      const approvalId = nextApprovalId();
+      const unlocked = requestApproval(approvalId, { type: 'unlock', origin })
+        .then(() => this.manager.isUnlocked())
+        .finally(() => {
+          this.unlockWindow = null;
+        });
+      this.unlockWindow = { approvalId, unlocked };
+    }
+    return this.unlockWindow.unlocked;
+  }
+
+  // Returns the reconnect error when the new server is unreachable; the wallet
+  // is then locked. Events go out afterwards so the UI never reloads mid-reconnect.
+  private async _applyNetworkSettings(settings: NetworkSettings): Promise<string | null> {
+    await saveNetworkSettings(this.store, settings);
+    const network = describeNetwork(settings).network;
+    if (!this.manager.isUnlocked()) {
+      await broadcastEvent('networkChanged', network);
+      return null;
+    }
+    // Reconnects with the cached password instead of forcing a re-unlock.
+    try {
+      await this.manager.reconnect();
+    } catch (e: unknown) {
+      cancelAutoLock();
+      this.overviewCache.clear();
+      await broadcastEvent('lock');
+      await broadcastEvent('networkChanged', network);
+      return String(e);
+    }
+    await broadcastEvent('networkChanged', network);
+    // The address differs per network, so connected apps need the new one.
+    await this._broadcastAccountSwitch();
+    return null;
   }
 
   // The popup names this wallet, so an approval only acts if it is still the
@@ -149,6 +203,13 @@ export class BackgroundRouter {
       case 'arkade_signMessage': {
         const { message } = params as { message: string };
         return this.manager.signMessage(message);
+      }
+      case 'arkade_switchNetwork': {
+        const preset = findNetworkPreset(params);
+        if (!preset) throw new Error('Unknown network');
+        const failure = await this._applyNetworkSettings({ arkServerUrl: preset.arkServerUrl, esploraUrl: preset.esploraUrl });
+        if (failure) throw new Error(serverUnreachableAfterSave(failure));
+        return true;
       }
       default:
         throw new Error(`Cannot recover approval for unknown method: ${method}`);
@@ -235,6 +296,8 @@ export class BackgroundRouter {
         const { password } = params as { password: string };
         await this.manager.unlock(password);
         scheduleAutoLock();
+        // Unlocking from the main popup also releases requests waiting on the unlock window.
+        if (this.unlockWindow) resolveApproval(this.unlockWindow.approvalId, true);
         await broadcastEvent('unlock');
         return ok(id, true);
       }
@@ -439,28 +502,8 @@ export class BackgroundRouter {
         return ok(id, await fetchConnectionInfo(await loadNetworkSettings(this.store)));
 
       case 'wallet_setNetworkSettings': {
-        const settings = params as NetworkSettings;
-        await saveNetworkSettings(this.store, settings);
-        const network = describeNetwork(settings).network;
-        if (!this.manager.isUnlocked()) {
-          await broadcastEvent('networkChanged', network);
-          return ok(id, true);
-        }
-        // Reconnects with the cached password instead of forcing a re-unlock.
-        // Events go out afterwards so the UI never reloads mid-reconnect.
-        try {
-          await this.manager.reconnect();
-        } catch (e: unknown) {
-          cancelAutoLock();
-          this.overviewCache.clear();
-          await broadcastEvent('lock');
-          await broadcastEvent('networkChanged', network);
-          return err(id, `Saved, but the new server couldn't be reached - unlock to try again. ${String(e)}`);
-        }
-        await broadcastEvent('networkChanged', network);
-        // The address differs per network, so connected apps need the new one.
-        await this._broadcastAccountSwitch();
-        return ok(id, true);
+        const failure = await this._applyNetworkSettings(params as NetworkSettings);
+        return failure ? err(id, serverUnreachableAfterSave(failure)) : ok(id, true);
       }
 
       // --- Accounts ---
@@ -535,7 +578,10 @@ export class BackgroundRouter {
 
       // --- App RPC (relayed by content.ts) ---
       case 'arkade_connect':
-        if (connected) return ok(id, [await this.manager.getAddress()]);
+        if (connected) {
+          if (!(await this._waitForUnlock(origin))) return err(id, WALLET_LOCKED_FOR_APPROVAL);
+          return ok(id, [await this.manager.getAddress()]);
+        }
         return this._approveThenPerform(id, { type: 'connect', origin }, method, params, 'User rejected the connection request');
 
       case 'arkade_disconnect': {
@@ -651,6 +697,19 @@ export class BackgroundRouter {
 
       case 'arkade_settle':
         return this._approveThenPerform(id, { type: 'settle', origin }, method, params, 'User rejected the settlement');
+
+      case 'arkade_switchNetwork': {
+        const preset = findNetworkPreset(params);
+        if (!preset) return err(id, `Unknown network. Use one of: ${NETWORK_PRESETS.map((p) => p.network).join(', ')}`);
+        if (describeNetwork(await loadNetworkSettings(this.store)).network === preset.network) return ok(id, true);
+        return this._approveThenPerform(
+          id,
+          { type: 'switchNetwork', origin, targetNetwork: preset.displayName },
+          method,
+          { network: preset.network },
+          'User rejected the network switch',
+        );
+      }
 
       default:
         return err(id, `Unknown method: ${method}`);

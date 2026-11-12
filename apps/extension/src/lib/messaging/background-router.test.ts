@@ -11,6 +11,8 @@ let session: Map<string, unknown>;
 let windowsOpened: string[];
 let alarmsCreated: number;
 let events: string[];
+let windowRemovedListeners: Set<(windowId: number) => void>;
+let store: KeyValueStore;
 
 function area(map: () => Map<string, unknown>) {
   return {
@@ -36,7 +38,10 @@ function area(map: () => Map<string, unknown>) {
       windowsOpened.push(url);
       return { id: windowsOpened.length };
     },
-    onRemoved: { addListener() {}, removeListener() {} },
+    onRemoved: {
+      addListener: (fn: (windowId: number) => void) => windowRemovedListeners.add(fn),
+      removeListener: (fn: (windowId: number) => void) => windowRemovedListeners.delete(fn),
+    },
   },
 };
 
@@ -73,6 +78,10 @@ const manager = {
   getActiveAccount: async () => activeAccount,
   listAccounts: async () => [{ seedId: 0, index: 0, label: 'Main' }],
   lock: async () => void calls.push('lock'),
+  unlock: async () => {
+    calls.push('unlock');
+    unlocked = true;
+  },
   reconnect: async () => {
     calls.push('reconnect');
     if (reconnectFails) throw new Error('SERVER_UNREACHABLE: down');
@@ -95,6 +104,11 @@ function send(method: string, params: unknown, sender: unknown): Promise<{ resul
   });
 }
 
+// Window ids are 1-based positions in windowsOpened.
+function closeWindow(windowId: number): void {
+  for (const listener of [...windowRemovedListeners]) listener(windowId);
+}
+
 async function waitForWindow(count: number): Promise<URL> {
   for (let i = 0; i < 100 && windowsOpened.length < count; i++) await new Promise((r) => setTimeout(r, 5));
   return new URL(windowsOpened[count - 1]);
@@ -105,17 +119,21 @@ function connect(origin: string): void {
 }
 
 beforeEach(() => {
+  // Approvals a test left open would count against the next test's per-site cap.
+  windowsOpened?.forEach((_, index) => closeWindow(index + 1));
   local = new Map();
   session = new Map();
   windowsOpened = [];
   alarmsCreated = 0;
   events = [];
+  windowRemovedListeners = new Set();
   reconnectFails = false;
   calls.length = 0;
   activeAccount = { seedId: 0, index: 0 };
   unlocked = true;
   storedOverview = {};
-  new BackgroundRouter(manager as never, memoryStore()).init();
+  store = memoryStore();
+  new BackgroundRouter(manager as never, store).init();
 });
 
 describe('BackgroundRouter sender gating', () => {
@@ -289,12 +307,60 @@ describe('BackgroundRouter approvals', () => {
 
   // Regression: approving a connect while locked errored, yet saved the
   // connection.
-  test('while locked, a connect opens no popup and connects nothing', async () => {
+  test('while locked, a connect opens the unlock window; closing it connects nothing', async () => {
     unlocked = false;
-    const res = await send('arkade_connect', undefined, page);
-    expect(res.error).toMatch(/Wallet is locked/);
-    expect(windowsOpened).toEqual([]);
+    const pending = send('arkade_connect', undefined, page);
+    const url = await waitForWindow(1);
+    expect(url.searchParams.get('type')).toBe('unlock');
+    closeWindow(1);
+    expect((await pending).error).toMatch(/Wallet is locked/);
+    expect(windowsOpened).toHaveLength(1);
     expect(local.get('arkade:permissions:origins')).toBeUndefined();
+  });
+
+  test('after unlocking, the locked connect continues to its own approval', async () => {
+    unlocked = false;
+    const pending = send('arkade_connect', undefined, page);
+    await waitForWindow(1);
+    await send('wallet_unlock', { password: 'pw' }, internal);
+    const approval = await waitForWindow(2);
+    expect(approval.searchParams.get('type')).toBe('connect');
+    // Labels are read after unlock, so the approval names the real wallet.
+    expect(approval.searchParams.get('account')).toBe('Main');
+    await send('approval_respond', { approvalId: approval.searchParams.get('id'), approved: true }, internal);
+    expect((await pending).result).toEqual(['ark1address']);
+  });
+
+  test('requests arriving while locked share one unlock window', async () => {
+    unlocked = false;
+    connect(DAPP);
+    const first = send('arkade_connect', undefined, page);
+    const second = send('arkade_connect', undefined, page);
+    await waitForWindow(1);
+    await send('wallet_unlock', { password: 'pw' }, internal);
+    expect((await first).result).toEqual(['ark1address']);
+    expect((await second).result).toEqual(['ark1address']);
+    expect(windowsOpened).toHaveLength(1);
+  });
+
+  test('a connected site calling connect while locked gets the unlock window, not an error', async () => {
+    unlocked = false;
+    connect(DAPP);
+    const pending = send('arkade_connect', undefined, page);
+    expect((await waitForWindow(1)).searchParams.get('type')).toBe('unlock');
+    await send('wallet_unlock', { password: 'pw' }, internal);
+    expect((await pending).result).toEqual(['ark1address']);
+  });
+
+  test('a fourth open request from one site says why it was refused', async () => {
+    connect(DAPP);
+    for (let i = 1; i <= 3; i++) {
+      void send('arkade_sendToAddress', { address: 'ark1dest', amount: i }, page);
+      await waitForWindow(i);
+    }
+    const res = await send('arkade_sendToAddress', { address: 'ark1dest', amount: 4 }, page);
+    expect(res.error).toMatch(/Too many Inscrib3 Wallet requests/);
+    expect(windowsOpened).toHaveLength(3);
   });
 
   test('a page cannot answer its own approval', async () => {
@@ -323,6 +389,55 @@ describe('BackgroundRouter network switch', () => {
     const res = await send('wallet_setNetworkSettings', settings, internal);
     expect(res.error).toMatch(/couldn't be reached/);
     expect(events).toContain('lock');
+  });
+});
+
+describe('BackgroundRouter arkade_switchNetwork', () => {
+  async function savedServer(): Promise<string | undefined> {
+    return (await store.get<{ arkServerUrl: string }>('arkade:settings:network'))?.arkServerUrl;
+  }
+
+  test('an unconnected site cannot ask', async () => {
+    expect((await send('arkade_switchNetwork', { network: 'mutinynet' }, page)).error).toMatch(/Not connected/);
+    expect(windowsOpened).toEqual([]);
+  });
+
+  test('only preset networks are accepted, so a site cannot pick a server URL', async () => {
+    connect(DAPP);
+    const res = await send('arkade_switchNetwork', { network: 'https://evil.example' }, page);
+    expect(res.error).toMatch(/Unknown network/);
+    expect(windowsOpened).toEqual([]);
+    expect(await savedServer()).toBeUndefined();
+  });
+
+  test('already on that network: nothing to approve', async () => {
+    connect(DAPP);
+    expect((await send('arkade_switchNetwork', { network: 'bitcoin' }, page)).result).toBe(true);
+    expect(windowsOpened).toEqual([]);
+  });
+
+  test('approved: saves the preset, reconnects and tells every page', async () => {
+    connect(DAPP);
+    const pending = send('arkade_switchNetwork', { network: 'mutinynet' }, page);
+    const url = await waitForWindow(1);
+    expect(url.searchParams.get('type')).toBe('switchNetwork');
+    expect(url.searchParams.get('targetNetwork')).toBe('Mutinynet (testnet)');
+    expect(url.searchParams.get('network')).toBe('Mainnet');
+    await send('approval_respond', { approvalId: url.searchParams.get('id'), approved: true }, internal);
+    expect((await pending).result).toBe(true);
+    expect(await savedServer()).toBe('https://mutinynet.arkade.sh');
+    expect(calls).toEqual(['reconnect']);
+    expect(events).toContain('networkChanged');
+  });
+
+  test('rejected: the network stays as it was', async () => {
+    connect(DAPP);
+    const pending = send('arkade_switchNetwork', { network: 'mutinynet' }, page);
+    const url = await waitForWindow(1);
+    await send('approval_respond', { approvalId: url.searchParams.get('id'), approved: false }, internal);
+    expect((await pending).error).toMatch(/rejected the network switch/);
+    expect(await savedServer()).toBeUndefined();
+    expect(calls).toEqual([]);
   });
 });
 

@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test';
-import { test, expect, createWallet, waitForArkade, DAPP_URL, DAPP_PORT } from './fixtures.js';
+import { test, expect, createWallet, unlockWallet, waitForArkade, DAPP_URL, DAPP_PORT } from './fixtures.js';
 import { startDappServer } from './dapp-server.js';
 
 // Test-only globals stashed on the app page.
@@ -20,6 +20,8 @@ declare global {
       ): Promise<string>;
       settle(): Promise<string>;
       signMessage(message: string): Promise<{ message: string; signature: string; address: string }>;
+      switchNetwork(network: string): Promise<boolean>;
+      getNetwork(): Promise<{ network: string }>;
       on(event: string, cb: (data?: unknown) => void): void;
     };
     __accountsChangedEvents: unknown[];
@@ -285,5 +287,37 @@ test.describe.serial('app connect / send / broadcast flow', () => {
     await expect
       .poll(async () => dapp.evaluate(() => window.__lockEvents.length), { timeout: 10_000 })
       .toBeGreaterThan(0);
+  });
+
+  // Runs after the lock test: the wallet is locked here.
+  test('locked connect: the window asks to unlock, then the request continues by itself', async ({ extensionContext }) => {
+    const approvalPagePromise = extensionContext.waitForEvent('page', { predicate: (p) => p.url().includes('approval.html') });
+    await dapp.evaluate(() => {
+      window.__connectResult = window.arkade.connect();
+    });
+    const unlockWindow = await approvalPagePromise;
+    expect(new URL(unlockWindow.url()).searchParams.get('type')).toBe('unlock');
+    await unlockWallet(unlockWindow);
+    await unlockWindow.waitForEvent('close', { timeout: 15_000 });
+
+    const accounts = await dapp.evaluate(() => window.__connectResult);
+    expect(accounts[0]).toMatch(/^ark1/);
+  });
+
+  test('switchNetwork: the window shows both networks; rejecting changes nothing', async ({ extensionContext }) => {
+    const before = await dapp.evaluate(() => window.arkade.getNetwork());
+    const target = before.network === 'mutinynet' ? 'bitcoin' : 'mutinynet';
+    const approvalPagePromise = extensionContext.waitForEvent('page', { predicate: (p) => p.url().includes('approval.html') });
+    await dapp.evaluate((network) => {
+      window.__result = window.arkade
+        .switchNetwork(network)
+        .then((value) => ({ ok: true, value }))
+        .catch((e: Error) => ({ ok: false, error: e.message }));
+    }, target);
+    await rejectApprovalAndExpectRejection(approvalPagePromise, dapp, async (approval) => {
+      await expect(approval.getByRole('heading', { name: 'Switch network?' })).toBeVisible();
+      await expect(approval.getByText(target === 'mutinynet' ? 'Mutinynet (testnet)' : 'Mainnet', { exact: true })).toBeVisible();
+    });
+    expect((await dapp.evaluate(() => window.arkade.getNetwork())).network).toBe(before.network);
   });
 });
