@@ -70,11 +70,19 @@ if (location.hostname.endsWith('.github.io')) {
 
 const request = parsePopupRequest();
 const isPopupMode = !!request && !!window.opener;
+const isEmbeddedProvider = request?.type === 'connect' && window.parent !== window;
+const trustedEmbeddedOrigins = new Set(['https://app.inscrib3.com', 'https://app.mutinynet.inscrib3.com']);
+if (isEmbeddedProvider && request && !trustedEmbeddedOrigins.has(request.origin)
+  && !(location.hostname === 'localhost' && new URL(request.origin).hostname === 'localhost')) {
+  document.body.textContent = 'This origin is not allowed to embed Inscrib3 Wallet.';
+  throw new Error('Refusing untrusted embedded wallet origin');
+}
+const isProviderMode = request?.type === 'connect' && (isPopupMode || isEmbeddedProvider);
 
-const app = isPopupMode
-  ? request!.type === 'connect'
-    ? createApp(ProviderApp, { origin: request!.origin, network: request!.network })
-    : createApp(ConnectApp, { request: request! })
+const app = isProviderMode
+  ? createApp(ProviderApp, { origin: request!.origin, network: request!.network, embedded: isEmbeddedProvider })
+  : isPopupMode
+    ? createApp(ConnectApp, { request: request! })
   : createApp(WalletApp);
 const client = createPwaWalletClient();
 app.provide(WALLET_CLIENT_KEY, client);
@@ -82,9 +90,9 @@ app.mount('#app');
 
 // A connected provider window can remain open, so it keeps the same inactivity
 // lock as the full PWA. One-shot payment popups close after approval.
-if (!isPopupMode || request?.type === 'connect') setupAutoLock(client);
+if (!isPopupMode || isProviderMode) setupAutoLock(client);
 
-if (!isPopupMode) {
+if (!isPopupMode && !isEmbeddedProvider) {
   createApp(UpdateBanner).mount('#update-banner');
   createApp(ExtensionBanner).mount('#extension-banner');
 }

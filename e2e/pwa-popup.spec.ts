@@ -95,4 +95,28 @@ test.describe('PWA popup connect/send flow (no extension installed)', () => {
     await connectPopup.getByRole('button', { name: 'Reject' }).click();
     await expect.poll(async () => page.evaluate(() => window.__popupMessages.some((message) => message.id === 'issue'))).toBe(true);
   });
+
+  test('embedded provider works without window.opener for installed iOS-style clients', async ({ page }) => {
+    await page.goto(DAPP_URL);
+    await trackPopupMessages(page);
+    const connectUrl = `${PWA_URL}/?arkade_connect_origin=1&arkade_connect_network=mutinynet`;
+    await page.evaluate((url) => {
+      const frame = document.createElement('iframe');
+      frame.src = url;
+      frame.referrerPolicy = 'origin';
+      document.body.appendChild(frame);
+      window.__walletPopup = frame.contentWindow;
+    }, connectUrl);
+    await expect.poll(() => page.frames().some((frame) => frame.url().startsWith(PWA_URL))).toBe(true);
+    const walletFrame = page.frames().find((frame) => frame.url().startsWith(PWA_URL))!;
+    await createWallet(walletFrame);
+    await expect(walletFrame.getByText('Connect to your wallet?')).toBeVisible({ timeout: 10_000 });
+    await walletFrame.getByRole('button', { name: 'Approve' }).click();
+    await expect.poll(async () => page.evaluate(() => window.__popupMessages.some((message) => message.type === 'inscrib3:connect')), { timeout: 10_000 }).toBe(true);
+    const connected = await page.evaluate(() => window.__popupMessages.find((message) => message.type === 'inscrib3:connect'));
+    expect((connected!.accounts as string[])[0]).toMatch(/^tark1/);
+
+    await page.evaluate((origin) => window.__walletPopup!.postMessage({ type: 'inscrib3:provider_request', request: { id: 'embedded-network', method: 'arkade_getNetwork' } }, origin), PWA_URL);
+    await expect.poll(async () => page.evaluate(() => window.__popupMessages.some((message) => message.id === 'embedded-network'))).toBe(true);
+  });
 });

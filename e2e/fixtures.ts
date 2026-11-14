@@ -1,4 +1,4 @@
-import { test as base, chromium, type BrowserContext, type Page } from '@playwright/test';
+import { test as base, chromium, type BrowserContext, type Frame, type Page } from '@playwright/test';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -41,7 +41,7 @@ export const test = base.extend<{}, WorkerFixtures>({
 });
 
 // Stops after setup: the next screen differs between the extension and the PWA.
-export async function createWallet(page: Page): Promise<void> {
+export async function createWallet(page: Page | Frame): Promise<void> {
   await page.getByRole('button', { name: 'Create new wallet' }).click();
   const passwordInputs = page.locator('input[type="password"]');
   await passwordInputs.nth(0).fill(WALLET_PASSWORD);
@@ -53,7 +53,7 @@ export async function createWallet(page: Page): Promise<void> {
 }
 
 // Every PWA page has its own WalletManager, so it needs unlocking here too.
-export async function unlockWallet(page: Page): Promise<void> {
+export async function unlockWallet(page: Page | Frame): Promise<void> {
   await page.locator('input[type="password"]').fill(WALLET_PASSWORD);
   await page.getByRole('button', { name: 'Unlock' }).click();
 }

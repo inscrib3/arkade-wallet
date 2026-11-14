@@ -3,9 +3,9 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { describeNetwork, NETWORK_PRESETS, type WalletClientEvent } from '@inscrib3/core';
 import { ApprovalRequestBody, SetupScreen, UnlockScreen, useWalletClient } from '@inscrib3/ui';
 
-const props = defineProps<{ origin: string; network?: 'bitcoin' | 'mutinynet' }>();
+const props = defineProps<{ origin: string; network?: 'bitcoin' | 'mutinynet'; embedded?: boolean }>();
 const client = useWalletClient();
-type Screen = 'loading' | 'error' | 'setup' | 'unlock' | 'approve-connect' | 'connected' | 'approve-action';
+type Screen = 'loading' | 'storage' | 'error' | 'setup' | 'unlock' | 'approve-connect' | 'connected' | 'approve-action';
 type RpcRequest = { id: string; method: string; params?: unknown };
 
 const screen = ref<Screen>('loading');
@@ -17,6 +17,7 @@ const networkLabel = ref('');
 const accountLabel = ref('');
 const requestedNetwork = props.network ? NETWORK_PRESETS.find((preset) => preset.network === props.network) : undefined;
 let removeClientListener: (() => void) | undefined;
+const peer = props.embedded ? window.parent : window.opener;
 
 watch(screen, (current) => {
   armed.value = false;
@@ -47,8 +48,33 @@ async function refreshScreen(): Promise<void> {
   } catch { screen.value = 'error'; }
 }
 
+type StorageAccessDocument = Document & {
+  hasStorageAccess?: () => Promise<boolean>;
+  requestStorageAccess?: () => Promise<void>;
+};
+
+async function begin(): Promise<void> {
+  const storageDocument = document as StorageAccessDocument;
+  if (props.embedded && storageDocument.hasStorageAccess && !await storageDocument.hasStorageAccess()) {
+    screen.value = 'storage';
+    return;
+  }
+  await refreshScreen();
+}
+
+async function grantStorageAccess(): Promise<void> {
+  const storageDocument = document as StorageAccessDocument;
+  try {
+    await storageDocument.requestStorageAccess?.();
+    await refreshScreen();
+  } catch {
+    actionError.value = 'iOS did not grant access to this wallet. Open wallet.inscrib3.com once in Safari, then return and try again.';
+    screen.value = 'error';
+  }
+}
+
 function post(message: Record<string, unknown>): void {
-  window.opener?.postMessage(message, props.origin);
+  peer?.postMessage(message, props.origin);
 }
 
 function result(id: string, value: unknown): void {
@@ -141,7 +167,7 @@ async function handleRequest(request: RpcRequest): Promise<void> {
 }
 
 function onMessage(event: MessageEvent): void {
-  if (event.origin !== props.origin || event.source !== window.opener) return;
+  if (event.origin !== props.origin || event.source !== peer) return;
   const data = event.data as { type?: unknown; request?: unknown } | null;
   if (!data || data.type !== 'inscrib3:provider_request' || !data.request || typeof data.request !== 'object') return;
   const request = data.request as Partial<RpcRequest>;
@@ -190,7 +216,7 @@ function rejectAction(): void {
 
 function rejectConnect(): void {
   post({ type: 'inscrib3:connect_rejected' });
-  setTimeout(() => window.close(), 100);
+  if (!props.embedded) setTimeout(() => window.close(), 100);
 }
 
 async function onUnlocked(): Promise<void> {
@@ -211,7 +237,7 @@ function forwardEvent(event: WalletClientEvent, data?: unknown): void {
 onMounted(() => {
   window.addEventListener('message', onMessage);
   removeClientListener = client.onEvent(forwardEvent);
-  void refreshScreen();
+  void begin();
 });
 onBeforeUnmount(() => { window.removeEventListener('message', onMessage); removeClientListener?.(); });
 watch(screen, (current) => { if (current === 'approve-connect' || current === 'connected') void refreshContext(); });
@@ -219,6 +245,7 @@ watch(screen, (current) => { if (current === 'approve-connect' || current === 'c
 
 <template>
   <div v-if="screen === 'loading'" class="loading">Loading…</div>
+  <div v-else-if="screen === 'storage'" class="storage-access"><div class="connected-mark">↗</div><h1>Use your Inscrib3 Wallet</h1><p>iOS isolates wallet storage inside installed Apps. Continue to grant this verified wallet frame access to the wallet you already created on wallet.inscrib3.com.</p><div class="origin-badge">{{ origin }}</div><button class="approve" @click="grantStorageAccess">Continue securely</button><button class="reject" @click="rejectConnect">Cancel</button></div>
   <div v-else-if="screen === 'error'" class="loading"><p>Couldn't read the wallet state.</p><button @click="refreshScreen">Retry</button></div>
   <SetupScreen v-else-if="screen === 'setup'" @complete="screen = 'approve-connect'" />
   <UnlockScreen v-else-if="screen === 'unlock'" @unlocked="onUnlocked" />
@@ -252,5 +279,5 @@ watch(screen, (current) => { if (current === 'approve-connect' || current === 'c
 </template>
 
 <style scoped>
-.loading,.connected{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:28px;text-align:center}.approval{padding:28px 24px;display:flex;flex-direction:column;gap:14px;min-height:100vh}.origin-badge{background:var(--color-surface-alt);border:1px solid var(--color-border);border-radius:999px;padding:4px 12px;font-size:12px;color:#aaa;word-break:break-all}.wallet-context{font-size:12px;color:var(--color-text-muted)}.network-request,.warning{padding:10px 12px;border:1px solid var(--color-border);border-radius:8px;color:var(--color-text-muted);font-size:12px}.warning{color:var(--color-error)}.description{color:#999;font-size:13px;line-height:1.5}.description.error{color:var(--color-error)}.actions{display:flex;gap:12px;margin-top:auto}button{flex:1;padding:12px;border:0;border-radius:8px;font-weight:600;cursor:pointer}button:disabled{opacity:.5}.reject{background:var(--color-surface-alt);color:var(--color-text)}.approve{background:var(--color-accent);color:#000}.connected-mark{width:52px;height:52px;display:grid;place-items:center;border-radius:50%;background:var(--color-accent);color:#000;font-size:28px}.connected p{max-width:300px;color:var(--color-text-muted);line-height:1.5}.details{display:flex;flex-direction:column;gap:8px}.details p{display:flex;justify-content:space-between;gap:12px;margin:0}.details span{color:var(--color-text-muted)}.details code,.details b{word-break:break-all;text-align:right}pre{white-space:pre-wrap;word-break:break-word;max-height:240px;overflow:auto;padding:12px;background:var(--color-surface-alt);border-radius:8px}
+.loading,.connected,.storage-access{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:28px;text-align:center}.approval{padding:28px 24px;display:flex;flex-direction:column;gap:14px;min-height:100vh}.origin-badge{background:var(--color-surface-alt);border:1px solid var(--color-border);border-radius:999px;padding:4px 12px;font-size:12px;color:#aaa;word-break:break-all}.wallet-context{font-size:12px;color:var(--color-text-muted)}.network-request,.warning{padding:10px 12px;border:1px solid var(--color-border);border-radius:8px;color:var(--color-text-muted);font-size:12px}.warning{color:var(--color-error)}.description,.storage-access p{color:#999;font-size:13px;line-height:1.5}.description.error{color:var(--color-error)}.actions{display:flex;gap:12px;margin-top:auto}button{flex:1;padding:12px;border:0;border-radius:8px;font-weight:600;cursor:pointer}button:disabled{opacity:.5}.reject{background:var(--color-surface-alt);color:var(--color-text)}.approve{background:var(--color-accent);color:#000}.connected-mark{width:52px;height:52px;display:grid;place-items:center;border-radius:50%;background:var(--color-accent);color:#000;font-size:28px}.connected p{max-width:300px;color:var(--color-text-muted);line-height:1.5}.details{display:flex;flex-direction:column;gap:8px}.details p{display:flex;justify-content:space-between;gap:12px;margin:0}.details span{color:var(--color-text-muted)}.details code,.details b{word-break:break-all;text-align:right}pre{white-space:pre-wrap;word-break:break-word;max-height:240px;overflow:auto;padding:12px;background:var(--color-surface-alt);border-radius:8px}
 </style>
