@@ -44,6 +44,7 @@ export function createPwaWalletClient(): WalletClient {
     isUnlocked: async () => manager.isUnlocked(),
 
     getAddress: () => manager.getAddress(),
+    getXOnlyPublicKey: () => manager.getXOnlyPublicKey(),
     getBoardingAddress: () => manager.getBoardingAddress(),
     getExitFeeAddress: () => manager.getExitFeeAddress(),
     getBalance: () => manager.getBalance(),

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue';
-import { describeNetwork } from '@inscrib3/core';
+import { describeNetwork, NETWORK_PRESETS } from '@inscrib3/core';
 import { SetupScreen, UnlockScreen, ApprovalRequestBody, useWalletClient } from '@inscrib3/ui';
 import type { PopupRequest } from './popup-request.js';
 
@@ -13,8 +13,12 @@ type Screen = 'loading' | 'error' | 'setup' | 'unlock' | 'approve' | 'done';
 const screen = ref<Screen>('loading');
 const client = useWalletClient();
 const rejected = ref(false);
-const sendError = ref('');
+const actionError = ref('');
 const sending = ref(false);
+const requestedNetworkId = props.request.type === 'connect' ? props.request.network : undefined;
+const requestedNetwork = requestedNetworkId
+  ? NETWORK_PRESETS.find((preset) => preset.network === requestedNetworkId)
+  : undefined;
 
 // Approve stays disabled briefly once the approval shows, so a click meant for
 // the page underneath can't land on it.
@@ -63,33 +67,37 @@ function onUnlocked() { screen.value = 'approve'; }
 
 async function approve() {
   const request = props.request;
-  // Always the exact opener origin, never '*'.
-  if (request.type === 'connect') {
-    const address = await client.getAddress();
-    window.opener?.postMessage({ type: 'inscrib3:connect', accounts: [address] }, request.origin);
-    screen.value = 'done';
-    setTimeout(() => window.close(), 800);
-    return;
-  }
-
   sending.value = true;
-  sendError.value = '';
+  actionError.value = '';
   try {
-    const txid = await client.send(request.address, request.amount);
-    window.opener?.postMessage({ type: 'inscrib3:send', txid }, request.origin);
+    // Always the exact opener origin, never '*'.
+    if (request.type === 'connect') {
+      if (requestedNetwork && describeNetwork(await client.getNetworkSettings()).network !== requestedNetwork.network) {
+        await client.setNetworkSettings({ arkServerUrl: requestedNetwork.arkServerUrl, esploraUrl: requestedNetwork.esploraUrl });
+      }
+      const address = await client.getAddress();
+      const activeNetwork = describeNetwork(await client.getNetworkSettings()).network;
+      window.opener?.postMessage({ type: 'inscrib3:connect', accounts: [address], network: activeNetwork }, request.origin);
+    } else if (request.type === 'send') {
+      const txid = await client.send(request.address, request.amount);
+      window.opener?.postMessage({ type: 'inscrib3:send', txid }, request.origin);
+    } else {
+      const txid = await client.sendAsset(request.address, request.assets, request.bitcoinAmount);
+      window.opener?.postMessage({ type: 'inscrib3:send_asset', txid }, request.origin);
+    }
     screen.value = 'done';
     setTimeout(() => window.close(), 800);
   } catch (e: unknown) {
-    // Tell the app instead of leaving its promise hanging.
-    sendError.value = String(e);
-    window.opener?.postMessage({ type: 'inscrib3:send_failed', error: sendError.value }, request.origin);
+    actionError.value = String(e);
+    const eventType = request.type === 'connect' ? 'inscrib3:connect_failed' : request.type === 'send' ? 'inscrib3:send_failed' : 'inscrib3:send_asset_failed';
+    window.opener?.postMessage({ type: eventType, error: actionError.value }, request.origin);
   } finally {
     sending.value = false;
   }
 }
 
 function reject() {
-  const eventType = props.request.type === 'connect' ? 'inscrib3:connect_rejected' : 'inscrib3:send_rejected';
+  const eventType = props.request.type === 'connect' ? 'inscrib3:connect_rejected' : props.request.type === 'send' ? 'inscrib3:send_rejected' : 'inscrib3:send_asset_rejected';
   window.opener?.postMessage({ type: eventType }, props.request.origin);
   rejected.value = true;
   screen.value = 'done';
@@ -111,12 +119,16 @@ function reject() {
     <div v-if="network || account" class="wallet-context" :class="{ mainnet: network === 'Mainnet' }">
       {{ network }}<template v-if="network && account"> · </template>{{ account }}
     </div>
+    <p v-if="requestedNetwork && requestedNetwork.displayName !== network" class="network-request">
+      This App requests <strong>{{ requestedNetwork.displayName }}</strong>. Approving will switch the wallet before connecting.
+    </p>
     <ApprovalRequestBody
-      :kind="request.type === 'connect' ? 'connect' : 'send'"
-      :address="request.type === 'send' ? request.address : null"
-      :amount="request.type === 'send' ? request.amount : null"
+      :kind="request.type"
+      :address="request.type === 'send' || request.type === 'sendAsset' ? request.address : null"
+      :amount="request.type === 'send' ? request.amount : request.type === 'sendAsset' ? request.bitcoinAmount : null"
+      :assets="request.type === 'sendAsset' ? request.assets : []"
     />
-    <p v-if="sendError" class="description error">{{ sendError }}</p>
+    <p v-if="actionError" class="description error">{{ actionError }}</p>
     <div class="actions">
       <button class="btn-reject" :disabled="sending" @click="reject">Reject</button>
       <button class="btn-approve" :disabled="sending || !armed" @click="approve">{{ sending ? 'Sending…' : 'Approve' }}</button>
@@ -151,6 +163,7 @@ function reject() {
 .approval.done { align-items: center; justify-content: center; text-align: center; }
 .wallet-context { font-size: 12px; color: var(--color-text-muted); }
 .wallet-context.mainnet { color: var(--color-accent); font-weight: 600; }
+.network-request { margin: 0; padding: 10px 12px; border: 1px solid var(--color-border); border-radius: 8px; color: var(--color-text-muted); font-size: 12px; line-height: 1.45; }.network-request strong { color: var(--color-accent); }
 .origin-badge {
   align-self: flex-start;
   background: var(--color-surface-alt);

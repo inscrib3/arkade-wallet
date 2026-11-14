@@ -48,6 +48,7 @@ export const INTERNAL_METHODS = [
   'wallet_isCreated',
   'wallet_isUnlocked',
   'wallet_getAddress',
+  'wallet_getXOnlyPublicKey',
   'wallet_getBoardingAddress',
   'wallet_getExitFeeAddress',
   'wallet_getBalance',

@@ -59,6 +59,7 @@ export interface WalletClient {
   isUnlocked(): Promise<boolean>;
 
   getAddress(): Promise<string>;
+  getXOnlyPublicKey(): Promise<string>;
   getBoardingAddress(): Promise<string>;
   getExitFeeAddress(): Promise<string>;
   getBalance(): Promise<SerializableWalletBalance>;

@@ -13,6 +13,7 @@ export function createExtensionWalletClient(): WalletClient {
     isUnlocked: () => sendToBackground('wallet_isUnlocked'),
 
     getAddress: () => sendToBackground('wallet_getAddress'),
+    getXOnlyPublicKey: () => sendToBackground('wallet_getXOnlyPublicKey'),
     getBoardingAddress: () => sendToBackground('wallet_getBoardingAddress'),
     getExitFeeAddress: () => sendToBackground('wallet_getExitFeeAddress'),
     getBalance: () => sendToBackground('wallet_getBalance'),

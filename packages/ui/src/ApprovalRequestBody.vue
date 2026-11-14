@@ -3,11 +3,12 @@
 // its own origin badge and buttons.
 withDefaults(
   defineProps<{
-    kind: 'connect' | 'send';
+    kind: 'connect' | 'send' | 'sendAsset';
     address?: string | null;
     amount?: number | null;
+    assets?: Array<{ assetId: string; amount: number }>;
   }>(),
-  { address: null, amount: null },
+  { address: null, amount: null, assets: () => [] },
 );
 
 function sats(n: unknown): string {
@@ -25,7 +26,7 @@ function sats(n: unknown): string {
     </p>
   </template>
 
-  <template v-else>
+  <template v-else-if="kind === 'send'">
     <h1>Approve transaction?</h1>
     <div class="tx-details">
       <div class="row">
@@ -41,6 +42,25 @@ function sats(n: unknown): string {
       This will broadcast a real transaction from your wallet. Make sure
       you trust this site before approving.
     </p>
+  </template>
+
+  <template v-else>
+    <h1>Send assets?</h1>
+    <div class="tx-details">
+      <div class="row" v-for="asset in assets" :key="asset.assetId">
+        <span class="label">Asset</span>
+        <span class="value mono">{{ asset.assetId }} — {{ sats(asset.amount) }} raw units</span>
+      </div>
+      <div class="row" v-if="amount != null && amount > 0">
+        <span class="label">Plus BTC</span>
+        <span class="value">{{ sats(amount) }} sats</span>
+      </div>
+      <div class="row">
+        <span class="label">To</span>
+        <span class="value mono">{{ address || '—' }}</span>
+      </div>
+    </div>
+    <p class="description">This will broadcast a real asset transaction from your wallet. Verify every asset, raw amount, BTC carrier, and destination before approving.</p>
   </template>
 </template>
 

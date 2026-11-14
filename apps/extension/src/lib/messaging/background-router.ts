@@ -313,6 +313,9 @@ export class BackgroundRouter {
       case 'wallet_getAddress':
         return ok(id, await this._fetchAndRemember('address', () => this.manager.getAddress()));
 
+      case 'wallet_getXOnlyPublicKey':
+        return ok(id, await this.manager.getXOnlyPublicKey());
+
       case 'wallet_getBoardingAddress':
         return ok(id, await this.manager.getBoardingAddress());
 
