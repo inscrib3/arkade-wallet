@@ -82,9 +82,17 @@ describe('getDelegateUrl', () => {
     expect(getDelegateUrl(mainnet.arkServerUrl)).toBe('https://delegate.arkade.money');
   });
 
-  test('mutinynet has no delegate service deployed', () => {
+  test('mutinynet resolves to the Mutinynet delegation service', () => {
     const mutinynet = NETWORK_PRESETS.find((p) => p.network === 'mutinynet')!;
-    expect(getDelegateUrl(mutinynet.arkServerUrl)).toBeNull();
+    expect(getDelegateUrl(mutinynet.arkServerUrl)).toBe('https://delegator.mutinynet.arkade.sh');
+  });
+  // Regression for issue #1: without a delegate the Mutinynet preset built a
+  // 2-leaf address, so an imported seed showed a different address than the Arkade wallet.
+  test('other spellings of the mutinynet URL still resolve the delegate and the preset', () => {
+    for (const url of ['https://mutinynet.arkade.sh/', 'HTTPS://MUTINYNET.ARKADE.SH', 'https://mutinynet.arkade.sh:443']) {
+      expect(getDelegateUrl(url)).toBe('https://delegator.mutinynet.arkade.sh');
+      expect(describeNetwork({ arkServerUrl: url, esploraUrl: 'https://mutinynet.com/api' })).toMatchObject({ network: 'mutinynet', isTestnet: true });
+    }
   });
 
   // A stranger's delegate key must never end up in a script a custom
