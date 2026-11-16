@@ -34,7 +34,7 @@ jobs:
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
         with:
           # Pinned - see ci.yml.
-          bun-version: 1.2.9
+          bun-version: 1.4.4
 
       # MAJOR.MINOR come from apps/extension/package.json; the patch is one
       # above the last vMAJOR.MINOR.* tag. Bump MINOR or MAJOR there by hand.
@@ -99,7 +99,7 @@ jobs:
 
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
         with:
-          bun-version: 1.2.9
+          bun-version: 1.4.4
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
