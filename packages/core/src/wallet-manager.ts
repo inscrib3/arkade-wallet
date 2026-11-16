@@ -45,7 +45,7 @@ import { IncomingFundsFilter, type IncomingFundsSummary } from './incoming-funds
 import { ExitService, type SerializableExitProgress } from './exit-service.js';
 import { AssetService, type AssetInfo } from './asset-service.js';
 import { toHistoryEntry, type TxHistoryEntry } from './tx-history.js';
-import { accountKeyPath, deriveAccountIdentity, deriveLegacyAccountIdentity, legacyAccountKeyPath } from './account-derivation.js';
+import { accountKeyPath, deriveAccountIdentity, deriveLegacyAccountIdentity, derivePointsPublicKey, legacyAccountKeyPath } from './account-derivation.js';
 import {
   loadAccounts,
   saveAccounts,
@@ -347,6 +347,7 @@ export class WalletManager {
   // Held while unlocked so signMessage() can reach the key.
   private identity: Identity | null = null;
   private signingAddress: string | null = null;
+  private pointsPublicKey: Uint8Array | null = null;
 
   private readonly fundsListeners = new Set<(funds: IncomingFundsSummary) => void>();
   // One live subscription while unlocked; replaced on every re-init.
@@ -423,6 +424,7 @@ export class WalletManager {
     this.assets.clearDetailsCache();
     this.identity = null;
     this.signingAddress = null;
+    this.pointsPublicKey = null;
     this.stopIncomingFundsWatch();
     await this.lightning.dispose();
     this.exit.dispose();
@@ -455,6 +457,12 @@ export class WalletManager {
     this.getWalletOrThrow();
     if (!this.identity) throw new Error('Wallet is locked');
     return hex.encode(await this.identity.xOnlyPublicKey());
+  }
+
+  async getPointsPublicKey(): Promise<string> {
+    this.getWalletOrThrow();
+    if (!this.pointsPublicKey) throw new Error('Wallet is locked');
+    return hex.encode(this.pointsPublicKey);
   }
 
   async getBoardingAddress(): Promise<string> {
@@ -889,6 +897,7 @@ export class WalletManager {
     await this.exit.init(identity, network as NetworkName, onchainProvider, scope);
 
     this.identity = identity;
+    this.pointsPublicKey = derivePointsPublicKey(mnemonic, accountIndex);
     this.signingAddress = null;
     this.startIncomingFundsWatch(this.wallet as Wallet);
 

@@ -15,6 +15,18 @@ export function legacyAccountKeyPath(isMainnet: boolean, accountIndex: number): 
   return `m/86'/${coinType}'/${accountIndex}'/0/0`;
 }
 
+// Never used for funds: this stable account identity deliberately has no
+// network-dependent coin type or operator-dependent Taproot tweak.
+export function pointsIdentityKeyPath(accountIndex: number): string {
+  return `m/86'/1237'/0'/0/${accountIndex}`;
+}
+
+export function derivePointsPublicKey(mnemonic: string, accountIndex: number): Uint8Array {
+  const node = HDKey.fromMasterSeed(mnemonicToSeedSync(mnemonic)).derive(pointsIdentityKeyPath(accountIndex));
+  if (!node.publicKey || node.publicKey.length !== 33) throw new Error('Could not derive points identity key');
+  return node.publicKey.slice(1);
+}
+
 // Materialize the SDK's standard m/86'/coin'/0'/0/* template at the requested
 // final index. The hardened BIP86 account remains 0 for every wallet account.
 export function deriveAccountDescriptor(mnemonic: string, isMainnet: boolean, accountIndex: number): string {

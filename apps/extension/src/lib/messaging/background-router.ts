@@ -316,6 +316,9 @@ export class BackgroundRouter {
       case 'wallet_getXOnlyPublicKey':
         return ok(id, await this.manager.getXOnlyPublicKey());
 
+      case 'wallet_getPointsPublicKey':
+        return ok(id, await this.manager.getPointsPublicKey());
+
       case 'wallet_getBoardingAddress':
         return ok(id, await this.manager.getBoardingAddress());
 
@@ -617,6 +620,10 @@ export class BackgroundRouter {
 
       case 'arkade_getXOnlyPublicKey': {
         return ok(id, await this.manager.getXOnlyPublicKey());
+      }
+
+      case 'arkade_getPointsPublicKey': {
+        return ok(id, await this.manager.getPointsPublicKey());
       }
 
       case 'arkade_getBoardingAddress': {

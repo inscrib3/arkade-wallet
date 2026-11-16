@@ -52,6 +52,7 @@ The connection is to the wallet, not to one account: after the user switches acc
 | `getAddress()` | Arkade address | No |
 | `getBoardingAddress()` | Onchain address that moves BTC into Ark | No |
 | `getXOnlyPublicKey()` | Hex x-only public key of the Ark signing key | No |
+| `getPointsPublicKey()` | Network- and operator-independent account identity; never used for funds | No |
 | `getBalance()` | `BalanceInfo` (below) | No |
 | `getNetwork()` | `NetworkInfo` (below) | No |
 | `getAssets()` | `AssetInfo[]` (below) | No |

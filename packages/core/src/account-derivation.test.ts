@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { MnemonicIdentity } from '@arkade-os/sdk';
 import { HDKey } from '@bitcoinerlab/descriptors-scure';
 import { mnemonicToSeedSync } from '@scure/bip39';
-import { accountKeyPath, deriveAccountDescriptor, deriveAccountIdentity } from './account-derivation.js';
+import { accountKeyPath, deriveAccountDescriptor, deriveAccountIdentity, derivePointsPublicKey, pointsIdentityKeyPath } from './account-derivation.js';
 
 const TEST_MNEMONIC = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
 
@@ -82,4 +82,12 @@ describe('accountKeyPath', () => {
       expect(await identity.xOnlyPublicKey()).toEqual(keyAtPath);
     });
   }
+});
+
+describe('points identity', () => {
+  test('is stable across networks and distinct per wallet account', () => {
+    expect(pointsIdentityKeyPath(0)).toBe("m/86'/1237'/0'/0/0");
+    expect(derivePointsPublicKey(TEST_MNEMONIC, 0)).toEqual(derivePointsPublicKey(TEST_MNEMONIC, 0));
+    expect(derivePointsPublicKey(TEST_MNEMONIC, 1)).not.toEqual(derivePointsPublicKey(TEST_MNEMONIC, 0));
+  });
 });

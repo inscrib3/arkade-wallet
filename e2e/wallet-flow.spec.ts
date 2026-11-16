@@ -8,6 +8,7 @@ declare global {
     arkade: {
       connect(): Promise<string[]>;
       getAddress(): Promise<string>;
+      getPointsPublicKey(): Promise<string>;
       getBalance(): Promise<unknown>;
       getAccounts(): Promise<string[]>;
       isConnected(): Promise<boolean>;
@@ -130,6 +131,9 @@ test.describe.serial('app connect / send / broadcast flow', () => {
 
     const events = await dapp.evaluate(() => window.__accountsChangedEvents);
     expect(events).toEqual([result]);
+
+    const pointsKey = await dapp.evaluate(() => window.arkade.getPointsPublicKey());
+    expect(pointsKey).toMatch(/^[0-9a-f]{64}$/);
   });
 
   test('send: rejecting the approval popup surfaces as a rejected promise, not a hang', async ({ extensionContext }) => {

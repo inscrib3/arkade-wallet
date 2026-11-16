@@ -120,6 +120,9 @@ export default defineUnlistedScript(() => {
     getXOnlyPublicKey(): Promise<string> {
       return request('arkade_getXOnlyPublicKey');
     },
+    getPointsPublicKey(): Promise<string> {
+      return request('arkade_getPointsPublicKey');
+    },
     getBoardingAddress(): Promise<string> {
       return request('arkade_getBoardingAddress');
     },

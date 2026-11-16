@@ -60,6 +60,7 @@ export interface WalletClient {
 
   getAddress(): Promise<string>;
   getXOnlyPublicKey(): Promise<string>;
+  getPointsPublicKey(): Promise<string>;
   getBoardingAddress(): Promise<string>;
   getExitFeeAddress(): Promise<string>;
   getBalance(): Promise<SerializableWalletBalance>;

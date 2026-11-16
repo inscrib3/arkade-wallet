@@ -63,6 +63,7 @@ const manager = {
   isUnlocked: () => unlocked,
   getAddress: async () => 'ark1address',
   getXOnlyPublicKey: async () => 'ab'.repeat(32),
+  getPointsPublicKey: async () => 'cd'.repeat(32),
   getBalance: async () => ({ total: 46_766n }),
   getTransactionHistory: async () => [{ txid: 'ark-tx', layer: 'ark' }],
   getStoredOverview: async () => storedOverview,
@@ -174,6 +175,7 @@ describe('BackgroundRouter unconnected origin', () => {
   test('reads refuse or return empty, and sends open no approval', async () => {
     expect((await send('arkade_getAddress', undefined, page)).error).toMatch(/Not connected/);
     expect((await send('arkade_getXOnlyPublicKey', undefined, page)).error).toMatch(/Not connected/);
+    expect((await send('arkade_getPointsPublicKey', undefined, page)).error).toMatch(/Not connected/);
     expect((await send('arkade_getAccounts', undefined, page)).result).toEqual([]);
     expect((await send('arkade_sendToAddress', { address: 'a', amount: 1 }, page)).error).toMatch(/Not connected/);
     expect(windowsOpened).toEqual([]);

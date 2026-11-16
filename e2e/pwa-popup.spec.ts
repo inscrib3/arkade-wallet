@@ -71,6 +71,10 @@ test.describe('PWA popup connect/send flow (no extension installed)', () => {
     const network = (await page.evaluate(() => window.__popupMessages.find((message) => message.id === 'network')))!.result as { network: string };
     expect(network.network).toBe('mutinynet');
 
+    await page.evaluate((origin) => window.__walletPopup!.postMessage({ type: 'inscrib3:provider_request', request: { id: 'points-key', method: 'arkade_getPointsPublicKey' } }, origin), PWA_URL);
+    await expect.poll(async () => page.evaluate(() => window.__popupMessages.some((message) => message.id === 'points-key'))).toBe(true);
+    expect((await page.evaluate(() => window.__popupMessages.find((message) => message.id === 'points-key')))!.result).toMatch(/^[0-9a-f]{64}$/);
+
     // --- BTC send, rejected in the persistent provider window ---
     await page.evaluate(({ address, origin }) => window.__walletPopup!.postMessage({ type: 'inscrib3:provider_request', request: { id: 'btc-send', method: 'arkade_sendToAddress', params: { address, amount: 1000 } } }, origin), { address, origin: PWA_URL });
     await expect(connectPopup.getByText('Approve transaction?')).toBeVisible({ timeout: 10_000 });

@@ -100,6 +100,7 @@ async function execute(method: string, rawParams: unknown): Promise<unknown> {
     case 'arkade_getAddress': return client.getAddress();
     case 'arkade_getBoardingAddress': return client.getBoardingAddress();
     case 'arkade_getXOnlyPublicKey': return client.getXOnlyPublicKey();
+    case 'arkade_getPointsPublicKey': return client.getPointsPublicKey();
     case 'arkade_getBalance': return client.getBalance();
     case 'arkade_getNetwork': return networkInfo();
     case 'arkade_getAssets': return client.getAssets();
@@ -124,7 +125,7 @@ async function execute(method: string, rawParams: unknown): Promise<unknown> {
 
 const readMethods = new Set([
   'arkade_connect', 'arkade_getAccounts', 'arkade_isConnected', 'arkade_getProviderState', 'arkade_getAddress',
-  'arkade_getBoardingAddress', 'arkade_getXOnlyPublicKey', 'arkade_getBalance', 'arkade_getNetwork',
+  'arkade_getBoardingAddress', 'arkade_getXOnlyPublicKey', 'arkade_getPointsPublicKey', 'arkade_getBalance', 'arkade_getNetwork',
   'arkade_getAssets', 'arkade_getTransactionHistory',
 ]);
 const actionMethods = new Set([

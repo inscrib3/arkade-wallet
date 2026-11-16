@@ -958,6 +958,16 @@ describe('WalletManager.getXOnlyPublicKey', () => {
   });
 });
 
+describe('WalletManager.getPointsPublicKey', () => {
+  test('returns the stable points key only while unlocked', async () => {
+    const manager = new WalletManager(inMemoryStore());
+    (manager as unknown as { wallet: unknown; pointsPublicKey: Uint8Array }).wallet = {};
+    (manager as unknown as { pointsPublicKey: Uint8Array }).pointsPublicKey = new Uint8Array(32).fill(9);
+    expect(await manager.getPointsPublicKey()).toBe('09'.repeat(32));
+    await expect(new WalletManager(inMemoryStore()).getPointsPublicKey()).rejects.toThrow(/Wallet is locked/);
+  });
+});
+
 describe('WalletManager.reconnect', () => {
   test('needs a cached password', async () => {
     await expect(new WalletManager(inMemoryStore()).reconnect()).rejects.toThrow(/Wallet is locked/);
