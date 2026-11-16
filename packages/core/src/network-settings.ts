@@ -31,6 +31,7 @@ export const NETWORK_PRESETS: NetworkPreset[] = [
     displayName: 'Mutinynet (testnet)',
     arkServerUrl: 'https://mutinynet.arkade.sh',
     esploraUrl: 'https://mutinynet.com/api',
+    delegateUrl: 'https://delegator.mutinynet.arkade.sh',
   },
 ];
 
@@ -95,7 +96,7 @@ const KNOWN_NETWORKS: Record<string, NetworkPreset> = Object.fromEntries(
 );
 
 // Presets only: pointing a custom server at Ark Labs' delegator would put a
-// key into scripts that server never agreed to. Mutinynet has no delegator.
+// key into scripts that server never agreed to.
 export function getDelegateUrl(arkServerUrl: string): string | null {
   return KNOWN_NETWORKS[canonicalServerUrl(arkServerUrl)]?.delegateUrl ?? null;
 }
