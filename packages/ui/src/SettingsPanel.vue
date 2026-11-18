@@ -9,6 +9,7 @@ import AccountsSettings from './settings/AccountsSettings.vue';
 import SeedSettings from './settings/SeedSettings.vue';
 import SitesSettings from './settings/SitesSettings.vue';
 import AdvancedSettings from './settings/AdvancedSettings.vue';
+import LanguageSettings from './settings/LanguageSettings.vue';
 
 const emit = defineEmits<{ cacheReset: [] }>();
 
@@ -21,6 +22,7 @@ type SettingsView =
   | 'accounts'
   | 'seed'
   | 'sites'
+  | 'language'
   | 'recovery'
   | 'advanced';
 
@@ -39,6 +41,7 @@ const MENU: MenuItem[] = [
   { id: 'accounts', title: 'Accounts', subtitle: 'Add, rename, switch or import accounts', icon: 'users' },
   { id: 'seed', title: 'Seed phrase', subtitle: 'Reveal and back up your recovery words', icon: 'key' },
   { id: 'sites', title: 'Connected sites', subtitle: 'Review and revoke sites you approved', icon: 'link' },
+  { id: 'language', title: 'Language', subtitle: 'Use your browser language or choose manually', icon: 'globe' },
   { id: 'recovery', title: 'Recovery', subtitle: 'Unilateral exit - move funds onchain alone', icon: 'shield' },
   { id: 'advanced', title: 'Advanced', subtitle: 'Reset local data or remove the wallet', icon: 'alert-triangle' },
 ];
@@ -88,6 +91,7 @@ const currentTitle = computed(() => MENU.find((m) => m.id === view.value)?.title
       <AccountsSettings v-else-if="view === 'accounts'" />
       <SeedSettings v-else-if="view === 'seed'" />
       <SitesSettings v-else-if="view === 'sites'" />
+      <LanguageSettings v-else-if="view === 'language'" />
       <AdvancedSettings v-else-if="view === 'advanced'" @reset="emit('cacheReset')" />
       <RecoveryPanel v-else-if="view === 'recovery'" />
     </template>

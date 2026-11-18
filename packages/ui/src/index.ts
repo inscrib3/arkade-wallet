@@ -9,3 +9,12 @@ export { default as BusyLabel } from './BusyLabel.vue';
 export { default as QrCode } from './QrCode.vue';
 export { WALLET_CLIENT_KEY, useWalletClient } from './wallet-client-key.js';
 export { useWalletAddresses, useWalletBalance, useNetworkInfo, useBtcPrice } from './composables/useWalletState.js';
+export {
+  activeLanguage,
+  detectWalletLanguage,
+  languagePreference,
+  resolveWalletLanguage,
+  setLanguagePreference,
+  startLocalization,
+} from './localization.js';
+export type { LanguagePreference, WalletLanguage } from './localization.js';

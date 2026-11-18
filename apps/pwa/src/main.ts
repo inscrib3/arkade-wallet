@@ -1,5 +1,5 @@
 import { createApp } from 'vue';
-import { WalletApp, WALLET_CLIENT_KEY } from '@inscrib3/ui';
+import { startLocalization, WalletApp, WALLET_CLIENT_KEY } from '@inscrib3/ui';
 import { createPwaWalletClient } from './pwa-wallet-client.js';
 import { setupAutoLock } from './auto-lock.js';
 import ConnectApp from './ConnectApp.vue';
@@ -7,6 +7,8 @@ import ProviderApp from './ProviderApp.vue';
 import UpdateBanner from './UpdateBanner.vue';
 import ExtensionBanner from './ExtensionBanner.vue';
 import type { PopupRequest } from './popup-request.js';
+
+startLocalization();
 
 // The opener controls the URL params, so they only pick the request type.
 // document.referrer is the trusted origin; no referrer fails closed.
