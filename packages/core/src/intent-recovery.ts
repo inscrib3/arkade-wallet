@@ -40,6 +40,30 @@ export async function releaseStaleIntents(repo: IntentRepository, arkProvider: P
   return released;
 }
 
+/**
+ * Commitment txids of batches that only renewed this wallet's own coins. This
+ * wallet joins a batch for two things: a settle, whose outputs all come back to
+ * the wallet, and an offboard, which adds an onchain output. So an intent with
+ * no onchain output was a renewal, and the sats it cost were the batch fee.
+ * Only intents made on this device are stored, so others stay unknown.
+ */
+export async function renewalCommitmentTxids(repo: IntentRepository): Promise<Set<string>> {
+  const txids = new Set<string>();
+  for (const intent of await collectIntents(repo)) {
+    if (intent.commitmentTransactionId && hasNoOnchainOutput(intent)) txids.add(intent.commitmentTransactionId);
+  }
+  return txids;
+}
+
+function hasNoOnchainOutput(intent: ArkIntent): boolean {
+  try {
+    const message: { onchain_output_indexes?: unknown } = JSON.parse(intent.registerProofMessage);
+    return Array.isArray(message.onchain_output_indexes) && message.onchain_output_indexes.length === 0;
+  } catch {
+    return false;
+  }
+}
+
 /** How much of one asset the unfinished intents hold, and when the oldest of them can be released. */
 export function reservedAsset(
   intents: readonly ArkIntent[],

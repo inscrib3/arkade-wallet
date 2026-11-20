@@ -159,3 +159,28 @@ describe('toHistoryEntry', () => {
     ]);
   });
 });
+
+describe('renewal batches', () => {
+  const renewals = new Set(['commit-renew']);
+
+  test('a sent batch whose commitment is a known renewal is flagged as one', () => {
+    const entry = toHistoryEntry(mockTx({ commitmentTxid: 'commit-renew', type: TxType.TxSent, amount: 272 }), new Set(), renewals);
+    expect(entry.renewal).toBe(true);
+    expect(entry.amount).toBe(272);
+  });
+
+  test('a sent batch with an unknown commitment stays a plain send', () => {
+    const entry = toHistoryEntry(mockTx({ commitmentTxid: 'commit-other', type: TxType.TxSent }), new Set(), renewals);
+    expect(entry.renewal).toBeUndefined();
+  });
+
+  test('an offchain send is never a renewal, even in a renewal batch', () => {
+    const entry = toHistoryEntry(mockTx({ arkTxid: 'ark-1', commitmentTxid: 'commit-renew', type: TxType.TxSent }), new Set(), renewals);
+    expect(entry.renewal).toBeUndefined();
+  });
+
+  test('coins received in a renewal batch are not flagged', () => {
+    const entry = toHistoryEntry(mockTx({ commitmentTxid: 'commit-renew', type: TxType.TxReceived }), new Set(), renewals);
+    expect(entry.renewal).toBeUndefined();
+  });
+});

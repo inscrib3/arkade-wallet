@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import BusyLabel from './BusyLabel.vue';
 import LoadingHint from './LoadingHint.vue';
-import { computed, onActivated, onDeactivated, onMounted, onUnmounted, ref } from 'vue';
+import { computed, onActivated, onDeactivated, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useWalletBalance, useBtcPrice, useNetworkInfo, useWalletAddresses } from './composables/useWalletState.js';
 import { useWalletClient } from './wallet-client-key.js';
 import {
@@ -125,6 +125,41 @@ const expiringSoon = computed(() =>
 const sweptCount = computed(() => vtxos.value.filter((v) => v.swept).length);
 const needsRenewal = computed(() => expiringSoon.value.length > 0 || sweptCount.value > 0);
 const firstExpiry = computed(() => Math.min(...expiringSoon.value.map((v) => v.expiresAt!)));
+
+// This screen only shows while the wallet is unlocked, and then the SDK renews
+// expiring and swept coins by itself (it checks every minute and joins the next
+// batch). So the user isn't asked to act: the button appears only if nothing
+// has changed after a few minutes, meaning the automatic renewal is stuck.
+const AUTO_RENEW_GRACE_MS = 5 * 60_000;
+const AUTO_RENEW_RECHECK_MS = 20_000;
+const renewalNeededSince = ref<number | null>(null);
+const nowMs = ref(Date.now());
+let autoRenewCheckHandle: ReturnType<typeof setInterval> | null = null;
+
+const autoRenewStuck = computed(
+  () => renewalNeededSince.value !== null && nowMs.value - renewalNeededSince.value >= AUTO_RENEW_GRACE_MS,
+);
+
+function stopAutoRenewWatch() {
+  if (autoRenewCheckHandle) clearInterval(autoRenewCheckHandle);
+  autoRenewCheckHandle = null;
+}
+
+watch(needsRenewal, (needed) => {
+  stopAutoRenewWatch();
+  if (!needed) {
+    renewalNeededSince.value = null;
+    return;
+  }
+  renewalNeededSince.value ??= Date.now();
+  nowMs.value = Date.now();
+  autoRenewCheckHandle = setInterval(() => {
+    nowMs.value = Date.now();
+    void refreshVtxos();
+  }, AUTO_RENEW_RECHECK_MS);
+}, { immediate: true });
+
+onUnmounted(stopAutoRenewWatch);
 
 function renewNow() {
   showVtxos.value = true;
@@ -338,13 +373,18 @@ onActivated(() => {
 
       <div v-if="needsRenewal && !settling" class="renew-banner">
         <p v-if="sweptCount > 0">
-          {{ sweptCount }} VTXO{{ sweptCount === 1 ? ' has' : 's have' }} expired and been swept by the server. {{ sweptCount === 1 ? 'It is still yours: renewing recovers it.' : 'They are still yours: renewing recovers them.' }}
+          {{ sweptCount }} VTXO{{ sweptCount === 1 ? ' has' : 's have' }} expired and been swept by the server. {{ sweptCount === 1 ? 'It is still yours.' : 'They are still yours.' }}
         </p>
         <p v-if="expiringSoon.length > 0">
           {{ expiringSoon.length }} VTXO{{ expiringSoon.length === 1 ? '' : 's' }} expire{{ expiringSoon.length === 1 ? 's' : '' }} by {{ formatDate(firstExpiry) }}.
-          The wallet renews {{ expiringSoon.length === 1 ? 'it' : 'them' }} on its own while it's unlocked; renew now to be sure.
         </p>
-        <button type="button" class="settle-btn" :disabled="settling" @click="renewNow">Renew now</button>
+        <template v-if="autoRenewStuck">
+          <p>Automatic renewal hasn't finished yet. You can start it yourself.</p>
+          <button type="button" class="settle-btn" :disabled="settling" @click="renewNow">Renew now</button>
+        </template>
+        <p v-else>
+          <BusyLabel :busy="true" busy-text="Renewing automatically. This takes a minute or two." />
+        </p>
       </div>
 
       <div class="vtxo-section">

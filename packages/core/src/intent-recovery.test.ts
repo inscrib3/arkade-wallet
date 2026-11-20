@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { ArkIntent, IntentRepository, VirtualCoin } from '@arkade-os/sdk';
-import { releaseStaleIntents, reservedAsset, STALE_INTENT_MS, unfinishedIntents } from './intent-recovery.js';
+import { releaseStaleIntents, renewalCommitmentTxids, reservedAsset, STALE_INTENT_MS, unfinishedIntents } from './intent-recovery.js';
 
 const NOW = 10_000_000_000;
 const ASSET = 'ab'.repeat(34);
@@ -54,5 +54,32 @@ describe('stale settlement intents (O-12)', () => {
     const coin = { txid: held.intentVtxos[0].txid, vout: 0, assets: [{ assetId: ASSET, amount: 140n }] } as unknown as VirtualCoin;
     expect(reservedAsset([held], [coin], ASSET)).toEqual({ amount: 140n, releasableAt: NOW + STALE_INTENT_MS });
     expect(reservedAsset([held], [coin], 'cd'.repeat(34)).amount).toBe(0n);
+  });
+});
+
+describe('renewal batches', () => {
+  function committed(id: string, onchainOutputIndexes: number[] | 'unreadable'): ArkIntent {
+    return {
+      ...intent(id, 'batch_succeeded', NOW),
+      commitmentTransactionId: `commit-${id}`,
+      registerProofMessage:
+        onchainOutputIndexes === 'unreadable'
+          ? 'not json'
+          : JSON.stringify({ type: 'register', onchain_output_indexes: onchainOutputIndexes, valid_at: 0, expire_at: 0 }),
+    };
+  }
+
+  test('a batch with no onchain output is a renewal; an offboard is not', async () => {
+    const repo = fakeRepo();
+    await repo.saveIntent(committed('renew', []));
+    await repo.saveIntent(committed('offboard', [0]));
+    expect(await renewalCommitmentTxids(repo)).toEqual(new Set(['commit-renew']));
+  });
+
+  test('intents without a commitment or with an unreadable message are skipped', async () => {
+    const repo = fakeRepo();
+    await repo.saveIntent({ ...committed('pending', []), commitmentTransactionId: undefined });
+    await repo.saveIntent(committed('broken', 'unreadable'));
+    expect((await renewalCommitmentTxids(repo)).size).toBe(0);
   });
 });

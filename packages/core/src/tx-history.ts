@@ -13,6 +13,9 @@ export interface TxHistoryEntry {
   onchainTxid?: string;
   // Raw units, no decimals applied.
   assets?: { assetId: string; amount: number; isMint?: boolean }[];
+  // A batch that renewed the wallet's own coins: `amount` is the fee it cost,
+  // not sats paid to anyone.
+  renewal?: true;
 }
 
 type ArkTransaction = Awaited<ReturnType<IWallet['getTransactionHistory']>>[number];
@@ -23,9 +26,15 @@ function isAssetGenesis(assetId: string, txid: string): boolean {
   return assetId.slice(0, 64) === txid;
 }
 
-export function toHistoryEntry(tx: ArkTransaction, lightningTxids: Set<string>): TxHistoryEntry {
+export function toHistoryEntry(
+  tx: ArkTransaction,
+  lightningTxids: Set<string>,
+  renewalCommitmentTxids: ReadonlySet<string> = new Set(),
+): TxHistoryEntry {
   const txid = tx.key.arkTxid || tx.key.commitmentTxid || tx.key.boardingTxid || '';
   const onchainTxid = tx.key.commitmentTxid || tx.key.boardingTxid || undefined;
+  const isRenewal =
+    tx.type === TxType.TxSent && !tx.key.arkTxid && !!tx.key.commitmentTxid && renewalCommitmentTxids.has(tx.key.commitmentTxid);
   const assets = tx.assets?.map((a) => ({
     assetId: a.assetId,
     amount: Number(a.amount),
@@ -40,5 +49,6 @@ export function toHistoryEntry(tx: ArkTransaction, lightningTxids: Set<string>):
     layer: lightningTxids.has(txid) ? 'lightning' : tx.key.boardingTxid ? 'onchain' : 'ark',
     ...(onchainTxid ? { onchainTxid } : {}),
     ...(assets && assets.length > 0 ? { assets } : {}),
+    ...(isRenewal ? { renewal: true as const } : {}),
   };
 }

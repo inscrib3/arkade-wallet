@@ -57,8 +57,14 @@ function rowDirection(tx: TxEntry): 'send' | 'receive' {
   return isMintTx(tx) ? 'receive' : tx.type;
 }
 
+function rowIcon(tx: TxEntry): 'refresh' | 'arrow-up' | 'arrow-down' {
+  if (tx.renewal) return 'refresh';
+  return rowDirection(tx) === 'send' ? 'arrow-up' : 'arrow-down';
+}
+
 function rowLabel(tx: TxEntry): string {
   if (isMintTx(tx)) return 'Created';
+  if (tx.renewal) return 'Renewal fee';
   return tx.type === 'send' ? 'Sent' : 'Received';
 }
 
@@ -154,7 +160,7 @@ onUnmounted(stopPolling);
       <div v-for="tx in filteredTxs" :key="tx.txid + tx.timestamp" class="tx-row">
         <div class="tx-main">
           <span class="tx-type" :class="rowDirection(tx)">
-            <Icon :name="rowDirection(tx) === 'send' ? 'arrow-up' : 'arrow-down'" :size="14" />
+            <Icon :name="rowIcon(tx)" :size="14" />
             {{ rowLabel(tx) }}
           </span>
           <span class="tx-amount" :class="rowDirection(tx)">{{ rowDirection(tx) === 'send' ? '-' : '+' }}{{ sats(tx.amount) }} sats</span>

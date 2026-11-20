@@ -37,7 +37,7 @@ import {
   hasStoredWallet,
 } from './session.js';
 import { createStorageConfig } from './storage.js';
-import { releaseStaleIntents, reservedAsset, unfinishedIntents } from './intent-recovery.js';
+import { releaseStaleIntents, renewalCommitmentTxids, reservedAsset, unfinishedIntents } from './intent-recovery.js';
 import { loadNetworkSettings, describeNetwork, getDelegateUrl } from './network-settings.js';
 import { createCachingDelegateProvider } from './delegate-provider.js';
 import { LightningService, type LightningPaymentQuote } from './lightning-service.js';
@@ -744,11 +744,18 @@ export class WalletManager {
 
   // Ark, boarding and Lightning.
   async getTransactionHistory(): Promise<TxHistoryEntry[]> {
-    const [txs, lightningTxids] = await Promise.all([
+    const [txs, lightningTxids, renewals] = await Promise.all([
       this.getWalletOrThrow().getTransactionHistory(),
       this.lightning.getKnownTxids(),
+      this.renewalCommitmentTxids(),
     ]);
-    return txs.map((tx) => toHistoryEntry(tx, lightningTxids));
+    return txs.map((tx) => toHistoryEntry(tx, lightningTxids, renewals));
+  }
+
+  // Labelling is best-effort: an unreadable intent store leaves renewals as plain sends.
+  private async renewalCommitmentTxids(): Promise<Set<string>> {
+    if (!this.intentRepository) return new Set();
+    return renewalCommitmentTxids(this.intentRepository).catch(() => new Set<string>());
   }
 
   async getAssetTransactionHistory(assetId: string): Promise<TxHistoryEntry[]> {
